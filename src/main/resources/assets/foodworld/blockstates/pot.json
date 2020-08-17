@@ -1,0 +1,8 @@
+{
+  "variants": {
+    "facing=north": { "model": "foodworld:block/pot" },
+    "facing=south": { "model": "foodworld:block/pot", "y":  180},
+    "facing=west": { "model": "foodworld:block/pot", "y":  270},
+    "facing=east": { "model": "foodworld:block/pot", "y":  90}
+  }
+}

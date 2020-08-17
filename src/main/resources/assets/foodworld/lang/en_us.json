@@ -1,0 +1,14 @@
+{
+  "item.foodworld.parsnip":"Parsnip",
+  "item.foodworld.chilli_pepper":"Chilli Pepper",
+  "item.foodworld.water_cup": "Water",
+
+  "block.foodworld.fertilized_dirt": "Fertilized Dirt",
+  "block.foodworld.pot": "Pot",
+  "block.foodworld.example_chest": "Example Chest Block",
+
+  "itemGroup.foodWorld": "Food World",
+
+  "container.example_chest": "Example Chest",
+  "container.pot":"Pot"
+}

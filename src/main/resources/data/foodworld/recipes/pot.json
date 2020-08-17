@@ -1,0 +1,28 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "# #",
+        " C ",
+        "#F#"
+    ],
+    "key": {
+        "#": {
+            "item": "minecraft:iron_nugget"
+        },
+        "C": {
+            "item": "minecraft:cauldron"
+        },
+        "F": [
+            {
+                "item": "minecraft:coal"
+            },
+            {
+                "item": "minecraft:charcoal"
+            }
+        ]
+    },
+    "result": {
+        "item": "foodworld:pot",
+        "count": 1
+    }
+}
