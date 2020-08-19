@@ -5,6 +5,7 @@ import com.electrosugar.foodworld.containerrecipe.abstractrecipe.AbstractBoiling
 import com.electrosugar.foodworld.customslots.PotFluidSlot;
 import com.electrosugar.foodworld.customslots.PotResultSlot;
 import com.electrosugar.foodworld.recipeplacer.ServerRecipePlacerPot;
+import com.electrosugar.foodworld.tileentity.PotTileEntity;
 import com.electrosugar.foodworld.tileentity.abstracttileentity.AbstractPotTileEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
@@ -20,13 +21,15 @@ import net.minecraft.item.crafting.RecipeItemHelper;
 import net.minecraft.item.crafting.ServerRecipePlacerFurnace;
 import net.minecraft.tileentity.AbstractFurnaceTileEntity;
 import net.minecraft.util.IIntArray;
+import net.minecraft.util.IWorldPosCallable;
 import net.minecraft.util.IntArray;
 import net.minecraft.world.World;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 
 public abstract class AbstractPotContainer extends RecipeBookContainer<IInventory> {
-    
+
+//    private final IWorldPosCallable canInteractWithCallable;
     public final IInventory potInventory;
     private final IIntArray potData;
     protected final World world;
@@ -56,7 +59,7 @@ public abstract class AbstractPotContainer extends RecipeBookContainer<IInventor
         int startY=53;
         //liquid fuel slot 0
         //nu uita de reparat is fluid sa nu verifice daca e fuel
-        this.addSlot(new PotFluidSlot(this,potInventoryIn,0,startX,startY));
+//        this.addSlot(new PotFluidSlot(this,potInventoryIn,0,startX,startY));
         //crafting table like grid slots 1-9
         startX= 44;
         startY= 17;

@@ -4,6 +4,8 @@ import com.electrosugar.foodworld.FoodWorld;
 import com.electrosugar.foodworld.client.gui.ExampleChestScreen;
 import com.electrosugar.foodworld.client.gui.PotScreen;
 import com.electrosugar.foodworld.init.ModContainerTypes;
+import com.electrosugar.foodworld.test.AbstractPotScreenTest;
+import com.electrosugar.foodworld.test.ModContainerTypesTest;
 import net.minecraft.client.gui.ScreenManager;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -17,5 +19,7 @@ public class ClientEventBusSubscriber {
     public static void clientSetup(FMLClientSetupEvent event){
         ScreenManager.registerFactory(ModContainerTypes.EXAMPLE_CHEST.get(), ExampleChestScreen::new);
         ScreenManager.registerFactory(ModContainerTypes.POT.get(), PotScreen::new);
+
+        ScreenManager.registerFactory(ModContainerTypes.POT_CONTAINER.get(), AbstractPotScreenTest::new);
     }
 }

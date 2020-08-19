@@ -1,5 +1,6 @@
 package com.electrosugar.foodworld.customslots;
 
+import com.electrosugar.foodworld.container.PotContainer;
 import com.electrosugar.foodworld.container.abstractcontainer.AbstractPotContainer;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.AbstractFurnaceContainer;
@@ -8,9 +9,9 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 
 public class PotFluidSlot extends Slot {
-    private final AbstractPotContainer field_216939_a;
+    private final PotContainer field_216939_a;
 
-    public PotFluidSlot(AbstractPotContainer p_i50084_1_, IInventory p_i50084_2_, int p_i50084_3_, int p_i50084_4_, int p_i50084_5_) {
+    public PotFluidSlot(PotContainer p_i50084_1_, IInventory p_i50084_2_, int p_i50084_3_, int p_i50084_4_, int p_i50084_5_) {
         super(p_i50084_2_, p_i50084_3_, p_i50084_4_, p_i50084_5_);
         this.field_216939_a = p_i50084_1_;
     }
