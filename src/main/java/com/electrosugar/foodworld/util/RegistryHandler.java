@@ -2,7 +2,6 @@ package com.electrosugar.foodworld.util;
 
 import com.electrosugar.foodworld.FoodWorld;
 import com.electrosugar.foodworld.blocks.BlockItemBase;
-import com.electrosugar.foodworld.blocks.FertilizedDirt;
 import com.electrosugar.foodworld.items.ChilliPepper;
 import com.electrosugar.foodworld.items.ItemBase;
 import com.electrosugar.foodworld.items.WaterCup;
@@ -31,9 +30,7 @@ public class RegistryHandler {
     public static final RegistryObject<WaterCup> WATER_CUP = ITEMS.register("water_cup", WaterCup::new);
 
     //Blocks only
-    public static final RegistryObject<Block> FERTILIZED_DIRT = BLOCKS.register("fertilized_dirt", FertilizedDirt::new);
 
     //Block items only
-    public static final RegistryObject<Item> FERTILIZED_DIRT_ITEM = ITEMS.register("fertilized_dirt",() -> new BlockItemBase(FERTILIZED_DIRT.get()));
 
 }

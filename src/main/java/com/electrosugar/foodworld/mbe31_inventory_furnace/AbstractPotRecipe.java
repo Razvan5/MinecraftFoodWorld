@@ -1,6 +1,5 @@
-package com.electrosugar.foodworld.test;
+package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
-import com.electrosugar.foodworld.containerrecipe.abstractrecipe.AbstractBoilingRecipe;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
@@ -9,9 +8,8 @@ import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
-import org.graalvm.compiler.core.common.type.ArithmeticOpTable;
 
-public abstract class AbstractBoilingRecipeTest implements IRecipe<IInventory> {
+public abstract class AbstractPotRecipe implements IRecipe<IInventory> {
     protected final IRecipeType<?> type;
     protected final ResourceLocation id;
     protected final String group;
@@ -20,7 +18,7 @@ public abstract class AbstractBoilingRecipeTest implements IRecipe<IInventory> {
     protected final float experience;
     protected final int cookTime;
 
-    public AbstractBoilingRecipeTest(IRecipeType<?> typeIn, ResourceLocation idIn, String groupIn, Ingredient ingredientIn, ItemStack resultIn, float experienceIn, int cookTimeIn) {
+    public AbstractPotRecipe(IRecipeType<?> typeIn, ResourceLocation idIn, String groupIn, Ingredient ingredientIn, ItemStack resultIn, float experienceIn, int cookTimeIn) {
         this.type = typeIn;
         this.id = idIn;
         this.group = groupIn;

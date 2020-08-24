@@ -1,14 +1,11 @@
 package com.electrosugar.foodworld.client.gui;
 
 import com.electrosugar.foodworld.FoodWorld;
-import com.electrosugar.foodworld.blocks.Pot;
 import com.electrosugar.foodworld.container.PotContainer;
 import com.electrosugar.foodworld.tileentity.PotTileEntity;
 import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
-import net.minecraft.client.tutorial.Tutorial;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraftforge.api.distmarker.Dist;

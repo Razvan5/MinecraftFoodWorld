@@ -1,30 +1,24 @@
 package com.electrosugar.foodworld;
 
-import com.electrosugar.foodworld.init.BlockInitNew;
-import com.electrosugar.foodworld.init.ItemInitNew;
-import com.electrosugar.foodworld.init.ModContainerTypes;
-import com.electrosugar.foodworld.init.ModTileEntityTypes;
+import com.electrosugar.foodworld.client.gui.PotScreen;
+import com.electrosugar.foodworld.events.BlockInit;
+import com.electrosugar.foodworld.events.StartupCommon;
 import com.electrosugar.foodworld.util.RegistryHandler;
 import net.minecraft.block.Block;
 import net.minecraft.block.Blocks;
+import net.minecraft.client.gui.ScreenManager;
 import net.minecraft.item.ItemGroup;
 import net.minecraft.item.ItemStack;
+import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.IEventBus;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.InterModComms;
+import net.minecraftforge.fml.DistExecutor;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
-import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
-import net.minecraftforge.fml.event.lifecycle.InterModProcessEvent;
-import net.minecraftforge.fml.event.server.FMLServerStartingEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-
-import java.util.stream.Collectors;
 
 @Mod("foodworld")
 public class FoodWorld
@@ -33,28 +27,48 @@ public class FoodWorld
     public static final String MOD_ID = "foodworld";
 
     public FoodWorld() {
-        final IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
+//        final IEventBus modEventBus = FMLJavaModLoadingContext.get().getModEventBus();
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-
-        //TurtyWurty 1.15.2 register type
-        ModContainerTypes.CONTAINER_TYPES.register(modEventBus);
-        //ends here
 
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::doClientStuff);
 
-        ItemInitNew.ITEMS.register(modEventBus);
-        BlockInitNew.BLOCKS.register(modEventBus);
-        ModTileEntityTypes.TILE_ENTITY_TYPES.register(modEventBus);
-
         RegistryHandler.init();
+        MOD_EVENT_BUS = FMLJavaModLoadingContext.get().getModEventBus();
 
+
+//        BlockInit.BLOCKS.register(MOD_EVENT_BUS);
+//        BlockInit.ITEMS.register(MOD_EVENT_BUS);
+//        BlockInit.TILE_ENTITY_TYPES.register(MOD_EVENT_BUS);
+//        BlockInit.CONTAINER_TYPES.register(MOD_EVENT_BUS);
+
+        registerCommonEvents();
+        DistExecutor.runWhenOn(Dist.CLIENT, () -> FoodWorld::registerClientOnlyEvents);
         MinecraftForge.EVENT_BUS.register(this);
+    }
+    public static IEventBus MOD_EVENT_BUS;
+
+    public static void registerCommonEvents() {
+
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.mbe31_inventory_furnace.StartupCommon.class);
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.events.StartupCommon.class);
+
+
+        //----------------
+    }
+
+    public static void registerClientOnlyEvents() {
+
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.mbe31_inventory_furnace.StartupClientOnly.class);
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.events.StartupClientOnly.class);
+
+
+        //----------------
     }
 
     private void setup(final FMLCommonSetupEvent event)
     {
-        LOGGER.info("HELLO FROM PREINIT");
-        LOGGER.info("DIRT BLOCK >> {}", Blocks.DIRT.getRegistryName());
+//        ScreenManager.registerFactory(StartupCommon.potContainerContainerType, PotScreen::new);
+
     }
 
     private void doClientStuff(final FMLClientSetupEvent event) {

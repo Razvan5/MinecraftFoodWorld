@@ -1,33 +1,21 @@
 package com.electrosugar.foodworld.blocks;
 
 import com.electrosugar.foodworld.FoodWorld;
-import com.electrosugar.foodworld.client.gui.PotScreen;
-import com.electrosugar.foodworld.container.PotContainer;
-import com.electrosugar.foodworld.init.ModTileEntityTypes;
-import com.electrosugar.foodworld.items.WaterCup;
 import com.electrosugar.foodworld.tileentity.PotTileEntity;
 import com.electrosugar.foodworld.util.RegistryHandler;
-import jdk.internal.loader.Resource;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.HorizontalBlock;
-import net.minecraft.block.SoundType;
+import net.minecraft.block.*;
 import net.minecraft.block.material.Material;
-import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.entity.player.ServerPlayerEntity;
 import net.minecraft.fluid.Fluids;
-import net.minecraft.fluid.IFluidState;
-import net.minecraft.fluid.WaterFluid;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.InventoryHelper;
+import net.minecraft.inventory.container.INamedContainerProvider;
 import net.minecraft.item.BlockItemUseContext;
-import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 import net.minecraft.state.DirectionProperty;
 import net.minecraft.state.StateContainer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntityType;
 import net.minecraft.util.*;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.BlockRayTraceResult;
@@ -35,24 +23,18 @@ import net.minecraft.util.math.shapes.IBooleanFunction;
 import net.minecraft.util.math.shapes.ISelectionContext;
 import net.minecraft.util.math.shapes.VoxelShape;
 import net.minecraft.util.math.shapes.VoxelShapes;
-import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.TextComponent;
 import net.minecraft.world.IBlockReader;
 import net.minecraft.world.World;
 import net.minecraftforge.common.ToolType;
-import net.minecraftforge.fluids.FluidAttributes;
 import net.minecraftforge.fluids.FluidStack;
 import net.minecraftforge.fluids.capability.IFluidHandler;
 import net.minecraftforge.fml.network.NetworkHooks;
-import net.minecraftforge.registries.ForgeRegistries;
 
 import javax.annotation.Nullable;
 import java.util.stream.Stream;
 
-import static net.minecraftforge.common.PlantType.Water;
 
-
-public class PotBlock extends Block {
+public class PotBlock extends ContainerBlock {
 
     private static final DirectionProperty FACING = HorizontalBlock.HORIZONTAL_FACING;
 
@@ -238,7 +220,7 @@ public class PotBlock extends Block {
         return 0.6f;
     }
 
-    public PotBlock(Properties properties){
+    public PotBlock(){
         super(Block.Properties.create(Material.IRON)
                 .hardnessAndResistance(3.5f,4.5f)
                 .sound(SoundType.METAL)
@@ -254,48 +236,54 @@ public class PotBlock extends Block {
 
     @Override
     public TileEntity createTileEntity(BlockState state, IBlockReader world){
-        return ModTileEntityTypes.POT.get().create();
+        return createNewTileEntity(world);
+    }
+    @Nullable
+    @Override
+    public TileEntity createNewTileEntity(IBlockReader worldIn) {
+        return new PotTileEntity();
     }
 
     @Override
-    public ActionResultType onBlockActivated(BlockState state, World worldIn, BlockPos pos, PlayerEntity player,
-                                             Hand handIn, BlockRayTraceResult result){
-        TileEntity tile = worldIn.getTileEntity(pos);
+    public ActionResultType onBlockActivated(BlockState state, World worldIn, BlockPos pos, PlayerEntity player, Hand hand, BlockRayTraceResult rayTraceResult) {
+        if (worldIn.isRemote) return ActionResultType.SUCCESS; // on client side, don't do anything
 
-        if(worldIn.isRemote){
-            if(tile instanceof PotTileEntity){
-                if(player.getHeldItemMainhand().getItem() == RegistryHandler.WATER_CUP.get()){
-                    ((PotTileEntity) tile).fill(new FluidStack(Fluids.WATER, 250), IFluidHandler.FluidAction.EXECUTE);
-                    FoodWorld.LOGGER.info("GUI OPEN FILL");
-                    FoodWorld.LOGGER.info(((PotTileEntity) tile).fluidTank.getFluidAmount());
-                    FoodWorld.LOGGER.info(((PotTileEntity) tile).fluidTank.getFluid().getRawFluid().getRegistryName());
-                    return ActionResultType.SUCCESS;
-                }
-                else if(player.getHeldItemMainhand().getItem() == Items.BUCKET){
-                    ((PotTileEntity) tile).drain(new FluidStack(Fluids.WATER, 1000), IFluidHandler.FluidAction.EXECUTE);
-                    FoodWorld.LOGGER.info("GUI OPEN DRAIN");
-                    FoodWorld.LOGGER.info(((PotTileEntity) tile).fluidTank.getFluidAmount());
-                    FoodWorld.LOGGER.info(((PotTileEntity) tile).fluidTank.getFluid().getRawFluid().getRegistryName());
-                    return ActionResultType.SUCCESS;
-                }
-            }
+        INamedContainerProvider namedContainerProvider = this.getContainer(state, worldIn, pos);
+        if (namedContainerProvider != null) {
+            if (!(player instanceof ServerPlayerEntity)) return ActionResultType.FAIL;  // should always be true, but just in case...
+            ServerPlayerEntity serverPlayerEntity = (ServerPlayerEntity)player;
+            NetworkHooks.openGui(serverPlayerEntity, namedContainerProvider, (packetBuffer)->{});
+            // (packetBuffer)->{} is just a do-nothing because we have no extra data to send
         }
-        else if(player.getHeldItemMainhand().getItem() != RegistryHandler.WATER_CUP.get() && player.getHeldItemMainhand().getItem() != Items.BUCKET){
-            FoodWorld.LOGGER.info("GUI OPEN");
-            NetworkHooks.openGui((ServerPlayerEntity)player,(PotTileEntity)tile,pos);
-            return ActionResultType.SUCCESS;
-        }
-        return ActionResultType.FAIL;
+        return ActionResultType.SUCCESS;
     }
 
     @Override
-    public void onReplaced(BlockState state, World worldIn, BlockPos pos, BlockState newState, boolean isMoving) {
-        if(state.getBlock() != newState.getBlock()){
-            TileEntity tileEntity = worldIn.getTileEntity(pos);
-            if(tileEntity instanceof PotTileEntity){
-                InventoryHelper.dropItems(worldIn,pos,((PotTileEntity) tileEntity).getItems());
+    public void onReplaced(BlockState state, World world, BlockPos blockPos, BlockState newState, boolean isMoving) {
+        if (state.getBlock() != newState.getBlock()) {
+            TileEntity tileentity = world.getTileEntity(blockPos);
+            if (tileentity instanceof PotTileEntity) {
+                PotTileEntity potTileEntity = (PotTileEntity)tileentity;
+                potTileEntity.dropAllContents(world, blockPos);
             }
+//      worldIn.updateComparatorOutputLevel(pos, this);  if the inventory is used to set redstone power for comparators
+            super.onReplaced(state, world, blockPos, newState, isMoving);  // call it last, because it removes the TileEntity
         }
+    }
+
+    @Override
+    public boolean hasComparatorInputOverride(BlockState state) {
+        return false;
+    }
+
+    @Override
+    public int getComparatorInputOverride(BlockState blockState, World worldIn, BlockPos pos) {
+        return 0;
+    }
+
+    @Override
+    public BlockRenderType getRenderType(BlockState iBlockState) {
+        return BlockRenderType.MODEL;
     }
 
 }
