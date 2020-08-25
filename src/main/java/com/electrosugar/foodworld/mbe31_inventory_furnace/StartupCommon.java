@@ -3,14 +3,18 @@ package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 import com.electrosugar.foodworld.FoodWorld;
 import net.minecraft.block.Block;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroup;
+import net.minecraft.item.crafting.*;
 import net.minecraft.tileentity.TileEntityType;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.registry.Registry;
 import net.minecraftforge.common.extensions.IForgeContainerType;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.registries.IForgeRegistry;
 
 /**
  * User: brandon3055
@@ -26,6 +30,9 @@ public class StartupCommon
 
   public static TileEntityType<TileEntityFurnace> tileEntityTypeMBE31;  // Holds the type of our tile entity; needed for the TileEntityData constructor
   public static ContainerType<ContainerFurnace> containerTypeContainerFurnace;
+
+  public static IRecipeType<PotRecipe> potRecipeType = new PotRecipeType();
+  public static BoilingRecipeSerializer<PotRecipe> boilingRecipeSerializer;
 
   @SubscribeEvent
   public static void onBlocksRegistration(final RegistryEvent.Register<Block> blockRegisterEvent) {
@@ -62,5 +69,16 @@ public class StartupCommon
     containerTypeContainerFurnace.setRegistryName("pot");
     event.getRegistry().register(containerTypeContainerFurnace);
   }
+
+  @SubscribeEvent
+  public static void registerRecipeSerializers(final RegistryEvent.Register<IRecipeSerializer<?>> event){
+
+    boilingRecipeSerializer = IRecipeSerializer.register("foodworld:boiling",new BoilingRecipeSerializer<PotRecipe>(PotRecipe::new,100));
+//    boilingRecipeSerializer.setRegistryName("boiling");
+    Registry.register(Registry.RECIPE_TYPE, new ResourceLocation(potRecipeType.toString()), potRecipeType);
+
+    event.getRegistry().register(boilingRecipeSerializer);
+  }
+
 
 }

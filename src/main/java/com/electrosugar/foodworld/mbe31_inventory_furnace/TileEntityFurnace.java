@@ -271,7 +271,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 
 	// returns the smelting result for the given stack. Returns ItemStack.EMPTY if the given stack can not be smelted
 	public static ItemStack getSmeltingResultForItem(World world, ItemStack itemStack) {
-	  Optional<FurnaceRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
+	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
     if (!matchingRecipe.isPresent()) return ItemStack.EMPTY;
     return matchingRecipe.get().getRecipeOutput().copy();  // beware! You must deep copy otherwise you will alter the recipe itself
 	}
@@ -284,10 +284,10 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 	}
 
 	// gets the recipe which matches the given input, or Missing if none.
-  public static Optional<FurnaceRecipe> getMatchingRecipeForInput(World world, ItemStack itemStack) {
+  public static Optional<PotRecipe> getMatchingRecipeForInput(World world, ItemStack itemStack) {
     RecipeManager recipeManager = world.getRecipeManager();
     Inventory singleItemInventory = new Inventory(itemStack);
-    Optional<FurnaceRecipe> matchingRecipe = recipeManager.getRecipe(IRecipeType.SMELTING, singleItemInventory, world);
+    Optional<PotRecipe> matchingRecipe = recipeManager.getRecipe(StartupCommon.potRecipeType, singleItemInventory, world);
     return matchingRecipe;
   }
 
@@ -298,7 +298,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
    * @return cooking time (ticks) or 0 if no matching recipe
    */
   public static int getCookTime(World world, ItemStack itemStack) {
-	  Optional<FurnaceRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
+	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
 	  if (!matchingRecipe.isPresent()) return 0;
     return matchingRecipe.get().getCookTime();
   }

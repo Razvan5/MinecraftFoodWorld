@@ -10,7 +10,7 @@ import net.minecraft.util.ResourceLocation;
 
 public class PotRecipe extends AbstractPotRecipe {
     public PotRecipe(ResourceLocation idIn, String groupIn, Ingredient ingredientIn, ItemStack resultIn, float experienceIn, int cookTimeIn) {
-        super(IRecipeType.SMELTING, idIn, groupIn, ingredientIn, resultIn, experienceIn, cookTimeIn);
+        super(StartupCommon.potRecipeType, idIn, groupIn, ingredientIn, resultIn, experienceIn, cookTimeIn);
     }
 
     public ItemStack getIcon() {
@@ -18,6 +18,6 @@ public class PotRecipe extends AbstractPotRecipe {
     }
 
     public IRecipeSerializer<?> getSerializer() {
-        return IRecipeSerializer.SMELTING;
+        return StartupCommon.boilingRecipeSerializer;
     }
 }
