@@ -3,7 +3,6 @@ package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 import com.electrosugar.foodworld.FoodWorld;
 import net.minecraft.block.Block;
-import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
@@ -14,7 +13,6 @@ import net.minecraft.util.registry.Registry;
 import net.minecraftforge.common.extensions.IForgeContainerType;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.registries.IForgeRegistry;
 
 /**
  * User: brandon3055
@@ -25,19 +23,19 @@ import net.minecraftforge.registries.IForgeRegistry;
  */
 public class StartupCommon
 {
-  public static Block blockFurnace;  // this holds the unique instance of your block
-  public static BlockItem itemBlockFurnace; // and the corresponding item form that block
+  public static Block POT_BLOCK;  // this holds the unique instance of your block
+  public static BlockItem POT_BLOCK_ITEM; // and the corresponding item form that block
 
-  public static TileEntityType<TileEntityFurnace> tileEntityTypeMBE31;  // Holds the type of our tile entity; needed for the TileEntityData constructor
-  public static ContainerType<ContainerFurnace> containerTypeContainerFurnace;
+  public static TileEntityType<PotTileEntity> POT_TILE_ENTITY;  // Holds the type of our tile entity; needed for the TileEntityData constructor
+  public static ContainerType<PotContainer> POT_CONTAINER;
 
-  public static IRecipeType<PotRecipe> potRecipeType = new PotRecipeType();
-  public static BoilingRecipeSerializer<PotRecipe> boilingRecipeSerializer;
+  public static IRecipeType<PotRecipe> POT_RECIPE_TYPE = new PotRecipeType();
+  public static BoilingRecipeSerializer<PotRecipe> BOILING_RECIPE_SERIALIZER;
 
   @SubscribeEvent
   public static void onBlocksRegistration(final RegistryEvent.Register<Block> blockRegisterEvent) {
-    blockFurnace = new BlockInventoryFurnace().setRegistryName("pot_block");
-    blockRegisterEvent.getRegistry().register(blockFurnace);
+    POT_BLOCK = new PotInventoryBlock().setRegistryName("pot");
+    blockRegisterEvent.getRegistry().register(POT_BLOCK);
   }
 
   @SubscribeEvent
@@ -48,36 +46,36 @@ public class StartupCommon
     Item.Properties itemSimpleProperties = new Item.Properties()
             .maxStackSize(MAXIMUM_STACK_SIZE)
             .group(FoodWorld.FW_FOOD);  // which inventory tab?
-    itemBlockFurnace = new BlockItem(blockFurnace, itemSimpleProperties);
-    itemBlockFurnace.setRegistryName(blockFurnace.getRegistryName());
-    itemRegisterEvent.getRegistry().register(itemBlockFurnace);
+    POT_BLOCK_ITEM = new BlockItem(POT_BLOCK, itemSimpleProperties);
+    POT_BLOCK_ITEM.setRegistryName(POT_BLOCK.getRegistryName().toString());
+    itemRegisterEvent.getRegistry().register(POT_BLOCK_ITEM);
   }
 
   @SubscribeEvent
   public static void onTileEntityTypeRegistration(final RegistryEvent.Register<TileEntityType<?>> event) {
-    tileEntityTypeMBE31 = TileEntityType.Builder.create(TileEntityFurnace::new, blockFurnace)
+    POT_TILE_ENTITY = TileEntityType.Builder.create(PotTileEntity::new, POT_BLOCK)
             .build(null);
     // you probably don't need a datafixer --> null should be fine
-    tileEntityTypeMBE31.setRegistryName("pot_tile_entity");
-    event.getRegistry().register(tileEntityTypeMBE31);
+    POT_TILE_ENTITY.setRegistryName("pot_tile_entity");
+    event.getRegistry().register(POT_TILE_ENTITY);
   }
 
   @SubscribeEvent
   public static void registerContainers(final RegistryEvent.Register<ContainerType<?>> event)
   {
-    containerTypeContainerFurnace = IForgeContainerType.create(ContainerFurnace::createContainerClientSide);
-    containerTypeContainerFurnace.setRegistryName("pot");
-    event.getRegistry().register(containerTypeContainerFurnace);
+    POT_CONTAINER = IForgeContainerType.create(PotContainer::createContainerClientSide);
+    POT_CONTAINER.setRegistryName("pot_container");
+    event.getRegistry().register(POT_CONTAINER);
   }
 
   @SubscribeEvent
   public static void registerRecipeSerializers(final RegistryEvent.Register<IRecipeSerializer<?>> event){
 
-    boilingRecipeSerializer = IRecipeSerializer.register("foodworld:boiling",new BoilingRecipeSerializer<PotRecipe>(PotRecipe::new,100));
+    BOILING_RECIPE_SERIALIZER = IRecipeSerializer.register("foodworld:boiling",new BoilingRecipeSerializer<PotRecipe>(PotRecipe::new,100));
 //    boilingRecipeSerializer.setRegistryName("boiling");
-    Registry.register(Registry.RECIPE_TYPE, new ResourceLocation(potRecipeType.toString()), potRecipeType);
+    Registry.register(Registry.RECIPE_TYPE, new ResourceLocation(POT_RECIPE_TYPE.toString()), POT_RECIPE_TYPE);
 
-    event.getRegistry().register(boilingRecipeSerializer);
+    event.getRegistry().register(BOILING_RECIPE_SERIALIZER);
   }
 
 

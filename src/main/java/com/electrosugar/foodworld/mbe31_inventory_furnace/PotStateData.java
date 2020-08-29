@@ -19,9 +19,9 @@ import java.util.Arrays;
  *  The IIntArray interface collates all the separate member variables into a single array for the purposes of transmitting
  *     from server to client (handled by Vanilla)
  */
-public class FurnaceStateData implements IIntArray {
+public class PotStateData implements IIntArray {
 
-  public static final int FUEL_SLOTS_COUNT = TileEntityFurnace.FUEL_SLOTS_COUNT;
+  public static final int FUEL_SLOTS_COUNT = PotTileEntity.FUEL_SLOTS_COUNT;
 
   /**The number of ticks that the current item has been cooking*/
   public int cookTimeElapsed;

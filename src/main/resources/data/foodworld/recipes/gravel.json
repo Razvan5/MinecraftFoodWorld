@@ -1,20 +1,20 @@
 {
     "type": "foodworld:boiling",
-       "pattern": [
-        "###",
-        "###",
-        "###"
+    "pattern": [
+        "#G"
     ],
     "key": {
         "#": {
             "item": "minecraft:redstone_block"
+        },
+        "G": {
+            "item": "minecraft:granite"
         }
     },
     "result": {
-        "item": "minecraft:diamond_block",
-        "count": 1
+        "item": "minecraft:gravel",
+        "count": 64
     },
     "experience": 0.1,
-    "cookingtime": 200,
-    "group": "lol"
+    "cookingtime": 200
 }

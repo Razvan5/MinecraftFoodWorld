@@ -2,13 +2,10 @@ package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 
 import com.mojang.blaze3d.systems.RenderSystem;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -27,12 +24,12 @@ import java.util.List;
  * Foreground layer - typically text labels
  * renderHoveredToolTip - for tool tips when the mouse is hovering over something of interest
  */
-public class ContainerScreenFurnace extends ContainerScreen<ContainerFurnace> {
+public class PotContainerScreen extends ContainerScreen<PotContainer> {
 
-	private ContainerFurnace containerFurnace;
-	public ContainerScreenFurnace(ContainerFurnace containerFurnace, PlayerInventory playerInventory, ITextComponent title) {
-		super(containerFurnace, playerInventory, title);
-    this.containerFurnace = containerFurnace;
+	private PotContainer potContainer;
+	public PotContainerScreen(PotContainer potContainer, PlayerInventory playerInventory, ITextComponent title) {
+		super(potContainer, playerInventory, title);
+    this.potContainer = potContainer;
 
 		// Set the width and height of the gui.  Should match the size of the texture!
 		xSize = 176;
@@ -70,15 +67,15 @@ public class ContainerScreenFurnace extends ContainerScreen<ContainerFurnace> {
     // If the mouse is over the progress bar add the progress bar hovering text
     if (isInRect(guiLeft + COOK_BAR_XPOS, guiTop + COOK_BAR_YPOS, COOK_BAR_WIDTH, COOK_BAR_HEIGHT, mouseX, mouseY)){
       hoveringText.add("Progress:");
-      int cookPercentage =(int)(containerFurnace.fractionOfCookTimeComplete() * 100);
+      int cookPercentage =(int)(potContainer.fractionOfCookTimeComplete() * 100);
       hoveringText.add(cookPercentage + "%");
     }
 
     // If the mouse is over one of the burn time indicators, add the burn time indicator hovering text
-    for (int i = 0; i < containerFurnace.FUEL_SLOTS_COUNT; ++i) {
+    for (int i = 0; i < PotContainer.FUEL_SLOTS_COUNT; ++i) {
       if (isInRect(guiLeft + FLAME_XPOS + FLAME_X_SPACING * i, guiTop + FLAME_YPOS, FLAME_WIDTH, FLAME_HEIGHT, mouseX, mouseY)) {
         hoveringText.add("Fuel Time:");
-        hoveringText.add(containerFurnace.secondsOfFuelRemaining(i) + "s");
+        hoveringText.add(potContainer.secondsOfFuelRemaining(i) + "s");
       }
     }
 
@@ -105,13 +102,13 @@ public class ContainerScreenFurnace extends ContainerScreen<ContainerFurnace> {
     this.blit(edgeSpacingX, edgeSpacingY, 0, 0, this.xSize, this.ySize);
 
     // draw the cook progress bar
-		double cookProgress = containerFurnace.fractionOfCookTimeComplete();
+		double cookProgress = potContainer.fractionOfCookTimeComplete();
 		blit(guiLeft + COOK_BAR_XPOS, guiTop + COOK_BAR_YPOS, COOK_BAR_ICON_U, COOK_BAR_ICON_V,
          (int)(cookProgress * COOK_BAR_WIDTH), COOK_BAR_HEIGHT);
 
 		// draw the fuel remaining bar for each fuel slot flame
-		for (int i = 0; i < containerFurnace.FUEL_SLOTS_COUNT; ++i) {
-			double burnRemaining = containerFurnace.fractionOfFuelRemaining(i);
+		for (int i = 0; i < PotContainer.FUEL_SLOTS_COUNT; ++i) {
+			double burnRemaining = potContainer.fractionOfFuelRemaining(i);
 			int yOffset = (int)((1.0 - burnRemaining) * FLAME_HEIGHT);
 			blit(guiLeft + FLAME_XPOS + FLAME_X_SPACING * i, guiTop + FLAME_YPOS + yOffset,
               FLAME_ICON_U, FLAME_ICON_V + yOffset, FLAME_WIDTH, FLAME_HEIGHT - yOffset);

@@ -2,40 +2,41 @@ package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 
 import com.electrosugar.foodworld.usefultools.SetBlockStateFlag;
-import net.minecraft.block.AbstractFurnaceBlock;
+import com.google.common.collect.Lists;
+import mcp.client.Start;
 import net.minecraft.block.BlockState;
-import net.minecraft.client.renderer.texture.ITickable;
+import net.minecraft.block.ContainerBlock;
+import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.inventory.CraftingInventory;
+import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.inventory.InventoryHelper;
 import net.minecraft.inventory.container.Container;
+import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.inventory.container.INamedContainerProvider;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.AbstractCookingRecipe;
-import net.minecraft.item.crafting.FurnaceRecipe;
-import net.minecraft.item.crafting.IRecipeType;
+import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.RecipeManager;
 import net.minecraft.nbt.CompoundNBT;
-import net.minecraft.nbt.ListNBT;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.ITickableTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.tileentity.FurnaceTileEntity;
+import net.minecraft.util.NonNullList;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.text.ITextComponent;
-import net.minecraft.util.text.StringTextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
-import net.minecraft.world.IWorld;
-import net.minecraft.world.LightType;
 import net.minecraft.world.World;
-import net.minecraftforge.items.ItemStackHandler;
+import net.minecraftforge.fml.LifecycleEventProvider;
 
 import javax.annotation.Nullable;
-import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -48,26 +49,26 @@ import java.util.Optional;
  * The fuel slots are used in parallel.  The more slots burning in parallel, the faster the cook time.
  * The code is heavily based on AbstractFurnaceTileEntity.
  */
-public class TileEntityFurnace extends TileEntity implements INamedContainerProvider, ITickableTileEntity {
+public class PotTileEntity extends TileEntity implements INamedContainerProvider, ITickableTileEntity {
 
 	public static final int FUEL_SLOTS_COUNT = 1;
 	public static final int INPUT_SLOTS_COUNT = 9;
 	public static final int OUTPUT_SLOTS_COUNT = 1;
 	public static final int TOTAL_SLOTS_COUNT = FUEL_SLOTS_COUNT + INPUT_SLOTS_COUNT + OUTPUT_SLOTS_COUNT;
 
-	private FurnaceZoneContents fuelZoneContents;
-  	private FurnaceZoneContents inputZoneContents;
-  	private FurnaceZoneContents outputZoneContents;
+	private PotZoneContents fuelZoneContents;
+  	private PotZoneContents inputZoneContents;
+  	private PotZoneContents outputZoneContents;
 
-	private final FurnaceStateData furnaceStateData = new FurnaceStateData();
+	private final PotStateData potStateData = new PotStateData();
 
-	public TileEntityFurnace(){
-	  super(StartupCommon.tileEntityTypeMBE31);
-	  fuelZoneContents = FurnaceZoneContents.createForTileEntity(FUEL_SLOTS_COUNT,
+	public PotTileEntity(){
+	  super(StartupCommon.POT_TILE_ENTITY);
+	  fuelZoneContents = PotZoneContents.createForTileEntity(FUEL_SLOTS_COUNT,
             this::canPlayerAccessInventory, this::markDirty);
-   inputZoneContents = FurnaceZoneContents.createForTileEntity(INPUT_SLOTS_COUNT,
+	  inputZoneContents = PotZoneContents.createForTileEntity(INPUT_SLOTS_COUNT,
             this::canPlayerAccessInventory, this::markDirty);
-    outputZoneContents = FurnaceZoneContents.createForTileEntity(OUTPUT_SLOTS_COUNT,
+	  outputZoneContents = PotZoneContents.createForTileEntity(OUTPUT_SLOTS_COUNT,
             this::canPlayerAccessInventory, this::markDirty);
 	}
 
@@ -89,7 +90,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 	 */
 	public int numberOfBurningFuelSlots()	{
 		int burningCount = 0;
-		for (int burnTime : furnaceStateData.burnTimeRemainings) {
+		for (int burnTime : potStateData.burnTimeRemainings) {
 			if (burnTime > 0) ++burningCount;
 		}
 		return burningCount;
@@ -103,11 +104,11 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 	@Override
 	public void tick() {
 	  if (world.isRemote) return; // do nothing on client.
-    ItemStack currentlySmeltingItem = getCurrentlySmeltingInputItem();
+    ItemStack currentlySmeltingItem =  getCurrentlySmeltingInputItem();
 
     // if user has changed the input slots, reset the smelting time
     if (!ItemStack.areItemsEqual(currentlySmeltingItem, currentlySmeltingItemLastTick)) {  // == and != don't work!
-      furnaceStateData.cookTimeElapsed = 0;
+      potStateData.cookTimeElapsed = 0;
     }
     currentlySmeltingItemLastTick = currentlySmeltingItem.copy();
 
@@ -116,21 +117,21 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 
 			// If fuel is available, keep cooking the item, otherwise start "uncooking" it at double speed
 			if (numberOfFuelBurning > 0) {
-        furnaceStateData.cookTimeElapsed += numberOfFuelBurning;
+        potStateData.cookTimeElapsed += numberOfFuelBurning;
 			}	else {
-        furnaceStateData.cookTimeElapsed -= 2;
+        potStateData.cookTimeElapsed -= 2;
 			}
-			if (furnaceStateData.cookTimeElapsed < 0) furnaceStateData.cookTimeElapsed = 0;
+			if (potStateData.cookTimeElapsed < 0) potStateData.cookTimeElapsed = 0;
 
-			int cookTimeForCurrentItem = getCookTime(this.world, currentlySmeltingItem);
-			furnaceStateData.cookTimeForCompletion = cookTimeForCurrentItem;
+			int cookTimeForCurrentItem = getCookTime(this.world, inputZoneContents);
+			potStateData.cookTimeForCompletion = cookTimeForCurrentItem;
 			// If cookTime has reached maxCookTime smelt the item and reset cookTime
-			if (furnaceStateData.cookTimeElapsed >= cookTimeForCurrentItem) {
+			if (potStateData.cookTimeElapsed >= cookTimeForCurrentItem) {
 				smeltFirstSuitableInputItem();
-        furnaceStateData.cookTimeElapsed = 0;
+        potStateData.cookTimeElapsed = 0;
 			}
 		}	else {
-      furnaceStateData.cookTimeElapsed = 0;
+      potStateData.cookTimeElapsed = 0;
 		}
 
 		// when the number of burning slots changes, we need to force the block to re-render, otherwise the change in
@@ -139,7 +140,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 		//    the client needs it for rendering and the server needs it for crop growth etc
 		int numberBurning = numberOfBurningFuelSlots();
 		BlockState currentBlockState = world.getBlockState(this.pos);
-    BlockState newBlockState = currentBlockState.with(BlockInventoryFurnace.BURNING_SIDES_COUNT, numberBurning);
+    BlockState newBlockState = currentBlockState.with(PotInventoryBlock.BURNING_SIDES_COUNT, numberBurning);
     if (!newBlockState.equals(currentBlockState)) {
 			final int FLAGS = SetBlockStateFlag.get(SetBlockStateFlag.BLOCK_UPDATE, SetBlockStateFlag.SEND_TO_CLIENTS);
       world.setBlockState(this.pos, newBlockState, FLAGS);
@@ -156,19 +157,19 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 		boolean inventoryChanged = false;
 
 		for (int fuelIndex = 0; fuelIndex < FUEL_SLOTS_COUNT; fuelIndex++) {
-			if (furnaceStateData.burnTimeRemainings[fuelIndex] > 0) {
-				--furnaceStateData.burnTimeRemainings[fuelIndex];
+			if (potStateData.burnTimeRemainings[fuelIndex] > 0) {
+				--potStateData.burnTimeRemainings[fuelIndex];
 				++burningCount;
 			}
 
-			if (furnaceStateData.burnTimeRemainings[fuelIndex] == 0) {
+			if (potStateData.burnTimeRemainings[fuelIndex] == 0) {
 			  ItemStack fuelItemStack = fuelZoneContents.getStackInSlot(fuelIndex);
 				if (!fuelItemStack.isEmpty() && getItemBurnTime(this.world, fuelItemStack) > 0) {
 					// If the stack in this slot isn't empty and is fuel, set burnTimeRemainings & burnTimeInitialValues to the
 					// item's burn time and decrease the stack size
           int burnTimeForItem = getItemBurnTime(this.world, fuelItemStack);
-          furnaceStateData.burnTimeRemainings[fuelIndex] = burnTimeForItem;
-          furnaceStateData.burnTimeInitialValues[fuelIndex] = burnTimeForItem;
+          potStateData.burnTimeRemainings[fuelIndex] = burnTimeForItem;
+          potStateData.burnTimeInitialValues[fuelIndex] = burnTimeForItem;
           fuelZoneContents.decrStackSize(fuelIndex, 1);
 					++burningCount;
 					inventoryChanged = true;
@@ -216,7 +217,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 		for (int inputIndex = 0; inputIndex < INPUT_SLOTS_COUNT; inputIndex++)	{
       ItemStack itemStackToSmelt = inputZoneContents.getStackInSlot(inputIndex);
       if (!itemStackToSmelt.isEmpty()) {
-				result = getSmeltingResultForItem(this.world, itemStackToSmelt);
+				result = getSmeltingResultForItem(this.world, inputZoneContents);
   			if (!result.isEmpty()) {
 					// find the first suitable output slot- either empty, or with identical item that has enough space
 					for (int outputIndex = 0; outputIndex < OUTPUT_SLOTS_COUNT; outputIndex++) {
@@ -237,22 +238,27 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
     if (!performSmelt) return returnvalue;
 
 		// alter input and output
-    inputZoneContents.decrStackSize(firstSuitableInputSlot, 1);
-    outputZoneContents.increaseStackSize(firstSuitableOutputSlot, result);
+		for(int slotIndex =0;slotIndex<inputZoneContents.getSizeInventory();slotIndex++){
+			if(!inputZoneContents.isStackEmpty(slotIndex)){
+				inputZoneContents.decrStackSize(slotIndex, 1);
+			}
+		}
+    	outputZoneContents.increaseStackSize(firstSuitableOutputSlot, result);
 
 		markDirty();
 		return returnvalue;
 	}
 
+
   /**
    * Will the given ItemStack fully fit into the target slot?
-   * @param furnaceZoneContents
+   * @param potZoneContents
    * @param slotIndex
    * @param itemStackOrigin
    * @return true if the given ItemStack will fit completely; false otherwise
    */
-	public boolean willItemStackFit(FurnaceZoneContents furnaceZoneContents, int slotIndex, ItemStack itemStackOrigin) {
-    ItemStack itemStackDestination = furnaceZoneContents.getStackInSlot(slotIndex);
+	public boolean willItemStackFit(PotZoneContents potZoneContents, int slotIndex, ItemStack itemStackOrigin) {
+    ItemStack itemStackDestination = potZoneContents.getStackInSlot(slotIndex);
 
     if (itemStackDestination.isEmpty() || itemStackOrigin.isEmpty()) {
       return true;
@@ -263,15 +269,15 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
     }
 
     int sizeAfterMerge = itemStackDestination.getCount() + itemStackOrigin.getCount();
-    if (sizeAfterMerge <= furnaceZoneContents.getInventoryStackLimit() && sizeAfterMerge <= itemStackDestination.getMaxStackSize()) {
+    if (sizeAfterMerge <= potZoneContents.getInventoryStackLimit() && sizeAfterMerge <= itemStackDestination.getMaxStackSize()) {
       return true;
     }
     return false;
   }
 
 	// returns the smelting result for the given stack. Returns ItemStack.EMPTY if the given stack can not be smelted
-	public static ItemStack getSmeltingResultForItem(World world, ItemStack itemStack) {
-	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
+	public static ItemStack getSmeltingResultForItem(World world, PotZoneContents potZoneContents) {
+	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, potZoneContents);
     if (!matchingRecipe.isPresent()) return ItemStack.EMPTY;
     return matchingRecipe.get().getRecipeOutput().copy();  // beware! You must deep copy otherwise you will alter the recipe itself
 	}
@@ -284,23 +290,22 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 	}
 
 	// gets the recipe which matches the given input, or Missing if none.
-  public static Optional<PotRecipe> getMatchingRecipeForInput(World world, ItemStack itemStack) {
+  public static Optional<PotRecipe> getMatchingRecipeForInput(World world, PotZoneContents potZoneContents) {
     RecipeManager recipeManager = world.getRecipeManager();
-    Inventory singleItemInventory = new Inventory(itemStack);
-    Optional<PotRecipe> matchingRecipe = recipeManager.getRecipe(StartupCommon.potRecipeType, singleItemInventory, world);
+    Optional<PotRecipe> matchingRecipe = recipeManager.getRecipe(StartupCommon.POT_RECIPE_TYPE, potZoneContents, world);
     return matchingRecipe;
   }
 
   /**
    * Gets the cooking time for this recipe input
    * @param world
-   * @param itemStack the input item to be smelted
+   * @param potZoneContents the input itemS to be smelted
    * @return cooking time (ticks) or 0 if no matching recipe
    */
-  public static int getCookTime(World world, ItemStack itemStack) {
-	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, itemStack);
+  public static int getCookTime(World world, PotZoneContents potZoneContents) {
+	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, potZoneContents);
 	  if (!matchingRecipe.isPresent()) return 0;
-    return matchingRecipe.get().getCookTime();
+    	return matchingRecipe.get().getCookTime();
   }
 
 	// Return true if the given stack is allowed to be inserted in the given slot
@@ -335,7 +340,7 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 	{
 		super.write(parentNBTTagCompound); // The super call is required to save and load the tile's location
 
-    furnaceStateData.putIntoNBT(parentNBTTagCompound);
+    potStateData.putIntoNBT(parentNBTTagCompound);
     parentNBTTagCompound.put(FUEL_SLOTS_NBT, fuelZoneContents.serializeNBT());
     parentNBTTagCompound.put(INPUT_SLOTS_NBT, inputZoneContents.serializeNBT());
     parentNBTTagCompound.put(OUTPUT_SLOTS_NBT, outputZoneContents.serializeNBT());
@@ -344,11 +349,10 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
 
 	// This is where you load the data that you saved in writeToNBT
 	@Override
-	public void read(CompoundNBT nbtTagCompound)
-	{
+	public void read(CompoundNBT nbtTagCompound) {
 		super.read(nbtTagCompound); // The super call is required to save and load the tile's location
 
-    furnaceStateData.readFromNBT(nbtTagCompound);
+    potStateData.readFromNBT(nbtTagCompound);
 
     CompoundNBT inventoryNBT = nbtTagCompound.getCompound(FUEL_SLOTS_NBT);
     fuelZoneContents.deserializeNBT(inventoryNBT);
@@ -434,8 +438,8 @@ public class TileEntityFurnace extends TileEntity implements INamedContainerProv
   @Nullable
   @Override
   public Container createMenu(int windowID, PlayerInventory playerInventory, PlayerEntity playerEntity) {
-    return ContainerFurnace.createContainerServerSide(windowID, playerInventory,
-                                  inputZoneContents, outputZoneContents, fuelZoneContents, furnaceStateData);
+    return PotContainer.createContainerServerSide(windowID, playerInventory,
+                                  inputZoneContents, outputZoneContents, fuelZoneContents, potStateData);
   }
 
   private ItemStack currentlySmeltingItemLastTick = ItemStack.EMPTY;

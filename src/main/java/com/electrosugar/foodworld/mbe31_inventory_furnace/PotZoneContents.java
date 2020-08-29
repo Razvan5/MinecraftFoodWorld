@@ -1,10 +1,15 @@
 package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.inventory.CraftingInventory;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.crafting.ICraftingRecipe;
 import net.minecraft.nbt.CompoundNBT;
+import net.minecraft.util.NonNullList;
 import net.minecraftforge.items.ItemStackHandler;
+import sun.jvm.hotspot.runtime.posix.POSIXSignals;
 
 import java.util.function.Predicate;
 
@@ -18,17 +23,17 @@ import java.util.function.Predicate;
  * 3) provides a way for the container to notify the TileEntity that the container has changed (eg markDirty, openInventory)
  *
  * Typical usage for a TileEntity which needs to store Items:
- * 1) When constructing the TileEntity, create and store a FurnaceZoneContents using createForTileEntity()
- * 2) In your ContainerType<MyContainer>, create a FurnaceZoneContents using createForClientSideContainer() and pass it to
+ * 1) When constructing the TileEntity, create and store a PotZoneContents using createForTileEntity()
+ * 2) In your ContainerType<MyContainer>, create a PotZoneContents using createForClientSideContainer() and pass it to
  *    the constructor of your client-side container.
  * 3) In your TileEntity write() and read() methods, call the serializeNBT() and deserializeNBT() methods
  * Vanilla and the container code will take care of everything else.
  */
 
-public class FurnaceZoneContents implements IInventory {
+public class PotZoneContents implements IInventory {
 
   /**
-   * Use this constructor to create a FurnaceZoneContents which is linked to its parent TileEntity.
+   * Use this constructor to create a PotZoneContents which is linked to its parent TileEntity.
    * On the server, this link will be used by the Container to request information and provide notifications to the parent
    * On the client, the link will be unused.
    * There are additional notificationLambdas available; these two are explicitly specified because your TileEntity will
@@ -42,22 +47,22 @@ public class FurnaceZoneContents implements IInventory {
    *                                     this is TileEntity::markDirty
    * @return the new ChestContents.
    */
-  public static FurnaceZoneContents createForTileEntity(int size,
-                                                        Predicate<PlayerEntity> canPlayerAccessInventoryLambda,
-                                                        Notify markDirtyNotificationLambda) {
-     return new FurnaceZoneContents(size, canPlayerAccessInventoryLambda, markDirtyNotificationLambda);
+  public static PotZoneContents createForTileEntity(int size,
+                                                    Predicate<PlayerEntity> canPlayerAccessInventoryLambda,
+                                                    Notify markDirtyNotificationLambda) {
+     return new PotZoneContents(size,canPlayerAccessInventoryLambda, markDirtyNotificationLambda);
   }
 
   /**
-   * Use this constructor to create a FurnaceZoneContents which is not linked to any parent TileEntity; i.e.
+   * Use this constructor to create a PotZoneContents which is not linked to any parent TileEntity; i.e.
    *   is used by the client side container:
    * * does not permanently store items
    * * cannot ask questions/provide notifications to a parent TileEntity
    * @param size  the max number of ItemStacks in the inventory
    * @return the new ChestContents
    */
-  public static FurnaceZoneContents createForClientSideContainer(int size) {
-    return new FurnaceZoneContents(size);
+  public static PotZoneContents createForClientSideContainer(int size) {
+    return new PotZoneContents(size);
   }
 
   // ----Methods used to load / save the contents to NBT
@@ -67,7 +72,7 @@ public class FurnaceZoneContents implements IInventory {
    * @return the tag containing the contents
    */
   public CompoundNBT serializeNBT()  {
-    return furnaceComponentContents.serializeNBT();
+    return potComponentContents.serializeNBT();
   }
 
   /**
@@ -75,7 +80,7 @@ public class FurnaceZoneContents implements IInventory {
    * @param nbt
    */
   public void deserializeNBT(CompoundNBT nbt)   {
-    furnaceComponentContents.deserializeNBT(nbt);
+    potComponentContents.deserializeNBT(nbt);
   }
 
   //  ------------- linking methods  -------------
@@ -132,7 +137,7 @@ public class FurnaceZoneContents implements IInventory {
 
   @Override
   public boolean isItemValidForSlot(int index, ItemStack stack) {
-    return furnaceComponentContents.isItemValid(index, stack);
+    return potComponentContents.isItemValid(index, stack);
   }
 
   // ----- Methods used to inform the parent tile entity that something has happened to the contents
@@ -163,43 +168,48 @@ public class FurnaceZoneContents implements IInventory {
 
   @Override
   public int getSizeInventory() {
-    return furnaceComponentContents.getSlots();
+    return potComponentContents.getSlots();
   }
 
   @Override
   public boolean isEmpty() {
-    for (int i = 0; i < furnaceComponentContents.getSlots(); ++i) {
-      if (!furnaceComponentContents.getStackInSlot(i).isEmpty()) return false;
+    for (int i = 0; i < potComponentContents.getSlots(); ++i) {
+      if (!potComponentContents.getStackInSlot(i).isEmpty()) return false;
     }
     return true;
   }
 
   @Override
   public ItemStack getStackInSlot(int index) {
-    return furnaceComponentContents.getStackInSlot(index);
+    return potComponentContents.getStackInSlot(index);
   }
 
   @Override
   public ItemStack decrStackSize(int index, int count) {
     if (count < 0) throw new IllegalArgumentException("count should be >= 0:" + count);
-    return furnaceComponentContents.extractItem(index, count, false);
+    return potComponentContents.extractItem(index, count, false);
   }
+
+  public boolean isStackEmpty(int slotIndex){
+    return potComponentContents.getStackInSlot(slotIndex) == ItemStack.EMPTY;
+  }
+
 
   @Override
   public ItemStack removeStackFromSlot(int index) {
-    int maxPossibleItemStackSize = furnaceComponentContents.getSlotLimit(index);
-    return furnaceComponentContents.extractItem(index, maxPossibleItemStackSize, false);
+    int maxPossibleItemStackSize = potComponentContents.getSlotLimit(index);
+    return potComponentContents.extractItem(index, maxPossibleItemStackSize, false);
   }
 
   @Override
   public void setInventorySlotContents(int index, ItemStack stack) {
-    furnaceComponentContents.setStackInSlot(index, stack);
+    potComponentContents.setStackInSlot(index, stack);
   }
 
   @Override
   public void clear() {
-    for (int i = 0; i < furnaceComponentContents.getSlots(); ++i) {
-      furnaceComponentContents.setStackInSlot(i, ItemStack.EMPTY);
+    for (int i = 0; i < potComponentContents.getSlots(); ++i) {
+      potComponentContents.setStackInSlot(i, ItemStack.EMPTY);
     }
   }
 
@@ -213,7 +223,7 @@ public class FurnaceZoneContents implements IInventory {
    *         (eg if ItemStack has a size of 23, and only 12 will fit, then ItemStack with a size of 11 is returned
    */
   public ItemStack increaseStackSize(int index, ItemStack itemStackToInsert) {
-    ItemStack leftoverItemStack = furnaceComponentContents.insertItem(index, itemStackToInsert, false);
+    ItemStack leftoverItemStack = potComponentContents.insertItem(index, itemStackToInsert, false);
     return leftoverItemStack;
   }
 
@@ -225,18 +235,18 @@ public class FurnaceZoneContents implements IInventory {
    *         (eg if ItemStack has a size of 23, and only 12 will fit, then ItemStack with a size of 11 is returned
    */
   public boolean doesItemStackFit(int index, ItemStack itemStackToInsert) {
-    ItemStack leftoverItemStack = furnaceComponentContents.insertItem(index, itemStackToInsert, true);
+    ItemStack leftoverItemStack = potComponentContents.insertItem(index, itemStackToInsert, true);
     return leftoverItemStack.isEmpty();
   }
 
   // ---------
 
-  private FurnaceZoneContents(int size) {
-    this.furnaceComponentContents = new ItemStackHandler(size);
+  private PotZoneContents(int size) {
+    this.potComponentContents = new ItemStackHandler(size);
   }
 
-  private FurnaceZoneContents(int size, Predicate<PlayerEntity> canPlayerAccessInventoryLambda, Notify markDirtyNotificationLambda) {
-    this.furnaceComponentContents = new ItemStackHandler(size);
+  private PotZoneContents(int size, Predicate<PlayerEntity> canPlayerAccessInventoryLambda, Notify markDirtyNotificationLambda) {
+    this.potComponentContents = new ItemStackHandler(size);
     this.canPlayerAccessInventoryLambda = canPlayerAccessInventoryLambda;
     this.markDirtyNotificationLambda = markDirtyNotificationLambda;
   }
@@ -261,5 +271,14 @@ public class FurnaceZoneContents implements IInventory {
   // default is "do nothing"
   private Notify closeInventoryNotificationLambda = ()->{};
 
-  private final ItemStackHandler furnaceComponentContents;
+  private final ItemStackHandler potComponentContents;
+
+  public int getHeight(){
+    return 3;
+  }
+
+  public int getWidth(){
+    return 3;
+  }
+
 }

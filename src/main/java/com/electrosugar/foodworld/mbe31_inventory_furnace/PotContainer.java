@@ -5,7 +5,6 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.container.Slot;
 import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.IContainerListener;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.World;
@@ -16,38 +15,38 @@ import org.apache.logging.log4j.Logger;
  * User: brandon3055
  * Date: 06/01/2015
  *
- * ContainerFurnace is used to link the client side gui to the server side inventory.  It collates the various different
+ * PotContainer is used to link the client side gui to the server side inventory.  It collates the various different
  * inventories into one place (using Slots)
  * It is also used to send server side data such as progress bars to the client for use in guis
  *
  * Vanilla automatically detects changes in the server side Container (the Slots and the trackedInts) and
  * sends them to the client container.
  */
-public class ContainerFurnace extends Container {
+public class PotContainer extends Container {
 
-  public static ContainerFurnace createContainerServerSide(int windowID, PlayerInventory playerInventory,
-                                                           FurnaceZoneContents inputZoneContents,
-                                                           FurnaceZoneContents outputZoneContents,
-                                                           FurnaceZoneContents fuelZoneContents,
-                                                           FurnaceStateData furnaceStateData) {
-    return new ContainerFurnace(windowID, playerInventory,
-            inputZoneContents, outputZoneContents, fuelZoneContents, furnaceStateData);
+  public static PotContainer createContainerServerSide(int windowID, PlayerInventory playerInventory,
+                                                       PotZoneContents inputZoneContents,
+                                                       PotZoneContents outputZoneContents,
+                                                       PotZoneContents fuelZoneContents,
+                                                       PotStateData potStateData) {
+    return new PotContainer(windowID, playerInventory,
+            inputZoneContents, outputZoneContents, fuelZoneContents, potStateData);
   }
 
-  public static ContainerFurnace createContainerClientSide(int windowID, PlayerInventory playerInventory, net.minecraft.network.PacketBuffer extraData) {
+  public static PotContainer createContainerClientSide(int windowID, PlayerInventory playerInventory, net.minecraft.network.PacketBuffer extraData) {
     //  don't need extraData for this example; if you want you can use it to provide extra information from the server, that you can use
     //  when creating the client container
     //  eg String detailedDescription = extraData.readString(128);
-    FurnaceZoneContents inputZoneContents = FurnaceZoneContents.createForClientSideContainer(INPUT_SLOTS_COUNT);
-    FurnaceZoneContents outputZoneContents = FurnaceZoneContents.createForClientSideContainer(OUTPUT_SLOTS_COUNT);
-    FurnaceZoneContents fuelZoneContents = FurnaceZoneContents.createForClientSideContainer(FUEL_SLOTS_COUNT);
-    FurnaceStateData furnaceStateData = new FurnaceStateData();
+    PotZoneContents inputZoneContents = PotZoneContents.createForClientSideContainer(INPUT_SLOTS_COUNT);
+    PotZoneContents outputZoneContents = PotZoneContents.createForClientSideContainer(OUTPUT_SLOTS_COUNT);
+    PotZoneContents fuelZoneContents = PotZoneContents.createForClientSideContainer(FUEL_SLOTS_COUNT);
+    PotStateData potStateData = new PotStateData();
 
     // on the client side there is no parent TileEntity to communicate with, so we:
     // 1) use dummy inventories and furnace state data (tracked ints)
     // 2) use "do nothing" lambda functions for canPlayerAccessInventory and markDirty
-    return new ContainerFurnace(windowID, playerInventory,
-                                inputZoneContents, outputZoneContents, fuelZoneContents, furnaceStateData);
+    return new PotContainer(windowID, playerInventory,
+                                inputZoneContents, outputZoneContents, fuelZoneContents, potStateData);
   }
 
     // must assign a slot index to each of the slots used by the GUI.
@@ -55,9 +54,9 @@ public class ContainerFurnace extends Container {
 	// Each time we add a Slot to the container using addSlotToContainer(), it automatically increases the slotIndex, which means
 	//  0 - 8 = hotbar slots (which will map to the InventoryPlayer slot numbers 0 - 8)
 	//  9 - 35 = player inventory slots (which map to the InventoryPlayer slot numbers 9 - 35)
-	//  36 - 39 = fuel slots (furnaceStateData 0 - 3)
-	//  40 - 44 = input slots (furnaceStateData 4 - 8)
-	//  45 - 49 = output slots (furnaceStateData 9 - 13)
+	//  36 - 39 = fuel slots (potStateData 0 - 3)
+	//  40 - 44 = input slots (potStateData 4 - 8)
+	//  45 - 49 = output slots (potStateData 9 - 13)
 
 	private static final int HOTBAR_SLOT_COUNT = 9;
 	private static final int PLAYER_INVENTORY_ROW_COUNT = 3;
@@ -65,9 +64,9 @@ public class ContainerFurnace extends Container {
 	private static final int PLAYER_INVENTORY_SLOT_COUNT = PLAYER_INVENTORY_COLUMN_COUNT * PLAYER_INVENTORY_ROW_COUNT;
 	private static final int VANILLA_SLOT_COUNT = HOTBAR_SLOT_COUNT + PLAYER_INVENTORY_SLOT_COUNT;
 
-	public static final int FUEL_SLOTS_COUNT = TileEntityFurnace.FUEL_SLOTS_COUNT;
-	public static final int INPUT_SLOTS_COUNT = TileEntityFurnace.INPUT_SLOTS_COUNT;
-	public static final int OUTPUT_SLOTS_COUNT = TileEntityFurnace.OUTPUT_SLOTS_COUNT;
+	public static final int FUEL_SLOTS_COUNT = PotTileEntity.FUEL_SLOTS_COUNT;
+	public static final int INPUT_SLOTS_COUNT = PotTileEntity.INPUT_SLOTS_COUNT;
+	public static final int OUTPUT_SLOTS_COUNT = PotTileEntity.OUTPUT_SLOTS_COUNT;
 	public static final int FURNACE_SLOTS_COUNT = FUEL_SLOTS_COUNT + INPUT_SLOTS_COUNT + OUTPUT_SLOTS_COUNT;
 
 	// slot index is the unique index for all slots in this container i.e. 0 - 35 for invPlayer then 36 - 49 for furnaceContents
@@ -82,21 +81,21 @@ public class ContainerFurnace extends Container {
   // i.e. invPlayer slots 0 - 35 (hotbar 0 - 8 then main inventory 9 to 35)
   // and furnace: inputZone slots 0 - 4, outputZone slots 0 - 4, fuelZone 0 - 3
 
-	public ContainerFurnace(int windowID, PlayerInventory invPlayer,
-            FurnaceZoneContents inputZoneContents,
-            FurnaceZoneContents outputZoneContents,
-            FurnaceZoneContents fuelZoneContents,
-            FurnaceStateData furnaceStateData) {
-    super(StartupCommon.containerTypeContainerFurnace, windowID);
-    if (StartupCommon.containerTypeContainerFurnace == null)
-      throw new IllegalStateException("Must initialise containerTypeContainerFurnace before constructing a ContainerFurnace!");
+	public PotContainer(int windowID, PlayerInventory invPlayer,
+                        PotZoneContents inputZoneContents,
+                        PotZoneContents outputZoneContents,
+                        PotZoneContents fuelZoneContents,
+                        PotStateData potStateData) {
+    super(StartupCommon.POT_CONTAINER, windowID);
+    if (StartupCommon.POT_CONTAINER == null)
+      throw new IllegalStateException("Must initialise containerTypeContainerFurnace before constructing a PotContainer!");
     this.inputZoneContents = inputZoneContents;
     this.outputZoneContents = outputZoneContents;
     this.fuelZoneContents = fuelZoneContents;
-    this.furnaceStateData = furnaceStateData;
+    this.potStateData = potStateData;
     this.world = invPlayer.player.world;
 
-    trackIntArray(furnaceStateData);    // tell vanilla to keep the furnaceStateData synchronised between client and server Containers
+    trackIntArray(potStateData);    // tell vanilla to keep the potStateData synchronised between client and server Containers
 
 		final int SLOT_X_SPACING = 18;
 		final int SLOT_Y_SPACING = 18;
@@ -195,10 +194,10 @@ public class ContainerFurnace extends Container {
 
       case PLAYER_HOTBAR:
       case PLAYER_MAIN_INVENTORY: // taking out of inventory - find the appropriate furnace zone
-        if (!TileEntityFurnace.getSmeltingResultForItem(world, sourceItemStack).isEmpty()) { // smeltable -> add to input
+        if (!PotTileEntity.getSmeltingResultForItem(world, this.inputZoneContents).isEmpty()) { // smeltable -> add to input
           successfulTransfer = mergeInto(SlotZone.INPUT_ZONE, sourceItemStack, false);
         }
-        if (!successfulTransfer && TileEntityFurnace.getItemBurnTime(world, sourceItemStack) > 0) { //burnable -> add to fuel from the bottom slot first
+        if (!successfulTransfer && PotTileEntity.getItemBurnTime(world, sourceItemStack) > 0) { //burnable -> add to fuel from the bottom slot first
           successfulTransfer = mergeInto(SlotZone.FUEL_ZONE, sourceItemStack, true);
         }
         if (!successfulTransfer) {  // didn't fit into furnace; try player main inventory or hotbar
@@ -249,8 +248,8 @@ public class ContainerFurnace extends Container {
    * @return fraction remaining, between 0.0 - 1.0
    */
   public double fractionOfFuelRemaining(int fuelSlot) {
-    if (furnaceStateData.burnTimeInitialValues[fuelSlot] <= 0 ) return 0;
-    double fraction = furnaceStateData.burnTimeRemainings[fuelSlot] / (double)furnaceStateData.burnTimeInitialValues[fuelSlot];
+    if (potStateData.burnTimeInitialValues[fuelSlot] <= 0 ) return 0;
+    double fraction = potStateData.burnTimeRemainings[fuelSlot] / (double) potStateData.burnTimeInitialValues[fuelSlot];
     return MathHelper.clamp(fraction, 0.0, 1.0);
   }
 
@@ -260,8 +259,8 @@ public class ContainerFurnace extends Container {
    * @return seconds remaining
    */
   public int secondsOfFuelRemaining(int fuelSlot)	{
-    if (furnaceStateData.burnTimeRemainings[fuelSlot] <= 0 ) return 0;
-    return furnaceStateData.burnTimeRemainings[fuelSlot] / 20; // 20 ticks per second
+    if (potStateData.burnTimeRemainings[fuelSlot] <= 0 ) return 0;
+    return potStateData.burnTimeRemainings[fuelSlot] / 20; // 20 ticks per second
   }
 
   /**
@@ -269,8 +268,8 @@ public class ContainerFurnace extends Container {
    * @return fraction remaining, between 0 - 1
    */
   public double fractionOfCookTimeComplete() {
-    if (furnaceStateData.cookTimeForCompletion == 0) return 0;
-    double fraction = furnaceStateData.cookTimeElapsed / (double)furnaceStateData.cookTimeForCompletion;
+    if (potStateData.cookTimeForCompletion == 0) return 0;
+    double fraction = potStateData.cookTimeElapsed / (double) potStateData.cookTimeForCompletion;
     return MathHelper.clamp(fraction, 0.0, 1.0);
   }
 
@@ -286,7 +285,7 @@ public class ContainerFurnace extends Container {
 		// if this function returns false, the player won't be able to insert the given item into this slot
 		@Override
 		public boolean isItemValid(ItemStack stack) {
-			return TileEntityFurnace.isItemValidForFuelSlot(stack);
+			return PotTileEntity.isItemValidForFuelSlot(stack);
 		}
 	}
 
@@ -299,7 +298,7 @@ public class ContainerFurnace extends Container {
 		// if this function returns false, the player won't be able to insert the given item into this slot
 		@Override
 		public boolean isItemValid(ItemStack stack) {
-			return TileEntityFurnace.isItemValidForInputSlot(stack);
+			return PotTileEntity.isItemValidForInputSlot(stack);
 		}
 	}
 
@@ -312,14 +311,14 @@ public class ContainerFurnace extends Container {
 		// if this function returns false, the player won't be able to insert the given item into this slot
 		@Override
 		public boolean isItemValid(ItemStack stack) {
-			return TileEntityFurnace.isItemValidForOutputSlot(stack);
+			return PotTileEntity.isItemValidForOutputSlot(stack);
 		}
 	}
 
-  private FurnaceZoneContents inputZoneContents;
-  private FurnaceZoneContents outputZoneContents;
-  private FurnaceZoneContents fuelZoneContents;
-  private FurnaceStateData furnaceStateData;
+  private PotZoneContents inputZoneContents;
+  private PotZoneContents outputZoneContents;
+  private PotZoneContents fuelZoneContents;
+  private PotStateData potStateData;
 
   private World world; //needed for some helper methods
   private static final Logger LOGGER = LogManager.getLogger();

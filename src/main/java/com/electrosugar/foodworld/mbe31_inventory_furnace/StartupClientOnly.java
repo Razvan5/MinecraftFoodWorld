@@ -1,8 +1,6 @@
 package com.electrosugar.foodworld.mbe31_inventory_furnace;
 
 import net.minecraft.client.gui.ScreenManager;
-import net.minecraft.client.renderer.model.ModelResourceLocation;
-import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 
@@ -18,6 +16,6 @@ public class StartupClientOnly
   // register the factory that is used on the client to generate a ContainerScreen corresponding to our Container
   @SubscribeEvent
   public static void onClientSetupEvent(FMLClientSetupEvent event) {
-    ScreenManager.registerFactory(StartupCommon.containerTypeContainerFurnace, ContainerScreenFurnace::new);
+    ScreenManager.registerFactory(StartupCommon.POT_CONTAINER, PotContainerScreen::new);
   }
 }
