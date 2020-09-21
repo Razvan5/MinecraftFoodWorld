@@ -1,7 +1,7 @@
 {
     "type": "foodworld:boiling",
     "pattern": [
-        "#"
+        "##"
     ],
     "key": {
         "#": {
@@ -15,9 +15,9 @@
     "experience": 0.1,
     "cookingtime": 100,
 	"fluidtime": 1000,
-	"fluiditem":"foodworld:water_cup",
+	"fluiditem":"minecraft:magma_block",
 	"fluidstack": {
-        "fluid": "minecraft:water",
+        "fluid": "minecraft:lava",
         "amount": 100
     }
 }

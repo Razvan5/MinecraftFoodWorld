@@ -1,42 +1,33 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
 
 import com.electrosugar.foodworld.usefultools.SetBlockStateFlag;
-import com.google.common.collect.Lists;
-import mcp.client.Start;
+import com.google.gson.JsonSyntaxException;
 import net.minecraft.block.BlockState;
-import net.minecraft.block.ContainerBlock;
-import net.minecraft.entity.item.ExperienceOrbEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Inventory;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.inventory.InventoryHelper;
 import net.minecraft.inventory.container.Container;
-import net.minecraft.inventory.container.ContainerType;
 import net.minecraft.inventory.container.INamedContainerProvider;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.AbstractCookingRecipe;
-import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.RecipeManager;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.network.NetworkManager;
 import net.minecraft.network.play.server.SUpdateTileEntityPacket;
 import net.minecraft.tileentity.ITickableTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.util.text.ITextComponent;
 import net.minecraft.util.text.TranslationTextComponent;
 import net.minecraft.world.World;
-import net.minecraftforge.fml.LifecycleEventProvider;
+import net.minecraftforge.fluids.FluidStack;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -50,11 +41,14 @@ import java.util.Optional;
  * The code is heavily based on AbstractFurnaceTileEntity.
  */
 public class PotTileEntity extends TileEntity implements INamedContainerProvider, ITickableTileEntity {
+	private static final Logger LOGGER = LogManager.getLogger();
+
 
 	public static final int FUEL_SLOTS_COUNT = 1;
 	public static final int INPUT_SLOTS_COUNT = 9;
 	public static final int OUTPUT_SLOTS_COUNT = 1;
 	public static final int TOTAL_SLOTS_COUNT = FUEL_SLOTS_COUNT + INPUT_SLOTS_COUNT + OUTPUT_SLOTS_COUNT;
+	public  FluidStack fluid = FluidStack.EMPTY;
 
 	private PotZoneContents fuelZoneContents;
   	private PotZoneContents inputZoneContents;
@@ -90,9 +84,9 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 	 */
 	public int numberOfBurningFuelSlots()	{
 		int burningCount = 0;
-		for (int burnTime : potStateData.burnTimeRemainings) {
+		int burnTime = potStateData.burnTimeRemainings;
 			if (burnTime > 0) ++burningCount;
-		}
+
 		return burningCount;
 	}
 
@@ -138,13 +132,13 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 		//   state will not be visible.  Likewise, we need to force a lighting recalculation.
 		// The block update (for renderer) is only required on client side, but the lighting is required on both, since
 		//    the client needs it for rendering and the server needs it for crop growth etc
-		int numberBurning = numberOfBurningFuelSlots();
-		BlockState currentBlockState = world.getBlockState(this.pos);
-    BlockState newBlockState = currentBlockState.with(PotInventoryBlock.BURNING_SIDES_COUNT, numberBurning);
-    if (!newBlockState.equals(currentBlockState)) {
+			int numberBurning = numberOfBurningFuelSlots();
+			BlockState currentBlockState = world.getBlockState(this.pos);
+			BlockState newBlockState = currentBlockState.with(PotInventoryBlock.BURNING_SIDES_COUNT, numberBurning);
+			if (!newBlockState.equals(currentBlockState)) {
 			final int FLAGS = SetBlockStateFlag.get(SetBlockStateFlag.BLOCK_UPDATE, SetBlockStateFlag.SEND_TO_CLIENTS);
-      world.setBlockState(this.pos, newBlockState, FLAGS);
-      markDirty();
+      		world.setBlockState(this.pos, newBlockState, FLAGS);
+      		markDirty();
 		}
   }
 
@@ -157,19 +151,22 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 		boolean inventoryChanged = false;
 
 		for (int fuelIndex = 0; fuelIndex < FUEL_SLOTS_COUNT; fuelIndex++) {
-			if (potStateData.burnTimeRemainings[fuelIndex] > 0) {
-				--potStateData.burnTimeRemainings[fuelIndex];
+			if (potStateData.burnTimeRemainings> 0) {
+				--potStateData.burnTimeRemainings;
 				++burningCount;
 			}
 
-			if (potStateData.burnTimeRemainings[fuelIndex] == 0) {
+			if (potStateData.burnTimeRemainings == 0) {
 			  ItemStack fuelItemStack = fuelZoneContents.getStackInSlot(fuelIndex);
-				if (!fuelItemStack.isEmpty() && getItemBurnTime(this.world, fuelItemStack) > 0) {
+				Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, inputZoneContents);
+				//!!!Be careful used for the texture
+				fluid = matchingRecipe.get().getFluidStack();
+				if (!fuelItemStack.isEmpty() && getItemBurnTime(this.world, inputZoneContents) > 0 && fuelItemStack.isItemEqual(matchingRecipe.get().getFluidItem())) {
 					// If the stack in this slot isn't empty and is fuel, set burnTimeRemainings & burnTimeInitialValues to the
 					// item's burn time and decrease the stack size
-          int burnTimeForItem = getItemBurnTime(this.world, fuelItemStack);
-          potStateData.burnTimeRemainings[fuelIndex] = burnTimeForItem;
-          potStateData.burnTimeInitialValues[fuelIndex] = burnTimeForItem;
+          int burnTimeForItem = getItemBurnTime(this.world, inputZoneContents);
+          potStateData.burnTimeRemainings = burnTimeForItem;
+          potStateData.burnTimeInitialValues = burnTimeForItem;
           fuelZoneContents.decrStackSize(fuelIndex, 1);
 					++burningCount;
 					inventoryChanged = true;
@@ -278,15 +275,16 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 	// returns the smelting result for the given stack. Returns ItemStack.EMPTY if the given stack can not be smelted
 	public static ItemStack getSmeltingResultForItem(World world, PotZoneContents potZoneContents) {
 	  Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, potZoneContents);
-    if (!matchingRecipe.isPresent()) return ItemStack.EMPTY;
-    return matchingRecipe.get().getRecipeOutput().copy();  // beware! You must deep copy otherwise you will alter the recipe itself
+	  if (!matchingRecipe.isPresent()) return ItemStack.EMPTY;
+    	return matchingRecipe.get().getRecipeOutput().copy();  // beware! You must deep copy otherwise you will alter the recipe itself
 	}
 
 	// returns the number of ticks the given item will burn. Returns 0 if the given item is not a valid fuel
-	public static int getItemBurnTime(World world, ItemStack stack)
+	public static int getItemBurnTime(World world,PotZoneContents potZoneContents)
 	{
-    int burntime = net.minecraftforge.common.ForgeHooks.getBurnTime(stack);
-		return burntime;
+		Optional<PotRecipe> matchingRecipe = getMatchingRecipeForInput(world, potZoneContents);
+		if (!matchingRecipe.isPresent()) return 0;
+		return matchingRecipe.get().getFluidTime();  // beware! You must deep copy otherwise you will alter the recipe itself
 	}
 
 	// gets the recipe which matches the given input, or Missing if none.
@@ -332,6 +330,7 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
   private final String FUEL_SLOTS_NBT = "fuelSlots";
   private final String INPUT_SLOTS_NBT = "inputSlots";
   private final String OUTPUT_SLOTS_NBT = "outputSlots";
+  private final String FLUID_NAME_NBT = "fluidRegistryName";
 
   // This is where you save any data that you don't want to lose when the tile entity unloads
 	// In this case, it saves the state of the furnace (burn time etc) and the itemstacks stored in the fuel, input, and output slots
@@ -340,10 +339,16 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 	{
 		super.write(parentNBTTagCompound); // The super call is required to save and load the tile's location
 
-    potStateData.putIntoNBT(parentNBTTagCompound);
-    parentNBTTagCompound.put(FUEL_SLOTS_NBT, fuelZoneContents.serializeNBT());
-    parentNBTTagCompound.put(INPUT_SLOTS_NBT, inputZoneContents.serializeNBT());
-    parentNBTTagCompound.put(OUTPUT_SLOTS_NBT, outputZoneContents.serializeNBT());
+		potStateData.putIntoNBT(parentNBTTagCompound);
+
+		parentNBTTagCompound.put(FUEL_SLOTS_NBT, fuelZoneContents.serializeNBT());
+    	parentNBTTagCompound.put(INPUT_SLOTS_NBT, inputZoneContents.serializeNBT());
+    	parentNBTTagCompound.put(OUTPUT_SLOTS_NBT, outputZoneContents.serializeNBT());
+    //test
+		LOGGER.info(fluid.getFluid().getRegistryName().toString());
+		potStateData.fluidRegistryName = fluid.getFluid().getRegistryName().toString();
+
+		parentNBTTagCompound.putString(FLUID_NAME_NBT,fluid.getFluid().getRegistryName().toString());
     return parentNBTTagCompound;
 	}
 
@@ -362,6 +367,14 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
 
     inventoryNBT = nbtTagCompound.getCompound(OUTPUT_SLOTS_NBT);
     outputZoneContents.deserializeNBT(inventoryNBT);
+
+    fluid = new FluidStack(Registry.FLUID.getValue(new ResourceLocation(nbtTagCompound.getString(FLUID_NAME_NBT))).orElseThrow(() -> {
+			return new JsonSyntaxException("Unknown item '" +  nbtTagCompound.getString(FLUID_NAME_NBT) + "'");
+    }),1000);
+
+    potStateData.fluidRegistryName = nbtTagCompound.getString(FLUID_NAME_NBT);
+    LOGGER.info("TileEntitydoi:-"+potStateData.fluidRegistryName);
+
 
     if (fuelZoneContents.getSizeInventory() != FUEL_SLOTS_COUNT
         || inputZoneContents.getSizeInventory() != INPUT_SLOTS_COUNT
@@ -443,4 +456,21 @@ public class PotTileEntity extends TileEntity implements INamedContainerProvider
   }
 
   private ItemStack currentlySmeltingItemLastTick = ItemStack.EMPTY;
+
+//  public static ResourceLocation getFluidTexture(){
+//  	  if(!PotTileEntity.fluid.isEmpty()){
+//		  return PotTileEntity.fluid.getFluid().getAttributes().getStillTexture();
+//	  }
+//  	  return null;
+//  }
+//	public static String getFluidName(){
+//		if(!PotTileEntity.fluid.isEmpty()){
+//			return PotTileEntity.fluid.getDisplayName().getString();
+//		}
+//		return null;
+//	}
+
+//	public static Fluid getFluid(){
+//  		return PotTileEntity.fluid.getFluid();
+//	}
 }

@@ -1,7 +1,13 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
+import com.electrosugar.foodworld.util.IStringArray;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.nbt.CompoundNBT;
 import net.minecraft.util.IIntArray;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.FluidStack;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.Arrays;
 
@@ -21,6 +27,8 @@ import java.util.Arrays;
  */
 public class PotStateData implements IIntArray {
 
+  private static final Logger LOGGER = LogManager.getLogger();
+
   public static final int FUEL_SLOTS_COUNT = PotTileEntity.FUEL_SLOTS_COUNT;
 
   /**The number of ticks that the current item has been cooking*/
@@ -29,25 +37,32 @@ public class PotStateData implements IIntArray {
   public int cookTimeForCompletion;
 
   /** The initial fuel value of the currently burning fuel in each slot (in ticks of burn duration) */
-  public int [] burnTimeInitialValues = new int[FUEL_SLOTS_COUNT];
+  public int burnTimeInitialValues;
   /** The number of burn ticks remaining on the current piece of fuel in each slot */
-  public int [] burnTimeRemainings = new int[FUEL_SLOTS_COUNT];
+  public int burnTimeRemainings;
+
+  public String fluidRegistryName = "empty";
 
   // --------- read/write to NBT for permanent storage (on disk, or packet transmission) - used by the TileEntity only
 
   public void putIntoNBT(CompoundNBT nbtTagCompound) {
     nbtTagCompound.putInt("CookTimeElapsed", cookTimeElapsed);
     nbtTagCompound.putInt("CookTimeForCompletion", cookTimeElapsed);
-    nbtTagCompound.putIntArray("burnTimeRemainings", burnTimeRemainings);
-    nbtTagCompound.putIntArray("burnTimeInitial", burnTimeInitialValues);
+    nbtTagCompound.putInt("burnTimeRemainings", burnTimeRemainings);
+    nbtTagCompound.putInt("burnTimeInitial", burnTimeInitialValues);
+    nbtTagCompound.putString("fluidRegistryName", fluidRegistryName);
+
   }
 
   public void readFromNBT(CompoundNBT nbtTagCompound) {
       // Trim the arrays (or pad with 0) to make sure they have the correct number of elements
     cookTimeElapsed = nbtTagCompound.getInt("CookTimeElapsed");
     cookTimeForCompletion = nbtTagCompound.getInt("CookTimeForCompletion");
-    burnTimeRemainings = Arrays.copyOf(nbtTagCompound.getIntArray("burnTimeRemainings"), FUEL_SLOTS_COUNT);
-    burnTimeInitialValues = Arrays.copyOf(nbtTagCompound.getIntArray("burnTimeInitialValues"), FUEL_SLOTS_COUNT);
+    burnTimeRemainings = nbtTagCompound.getInt("burnTimeRemainings");
+    burnTimeInitialValues = nbtTagCompound.getInt("burnTimeInitialValues");
+    fluidRegistryName = nbtTagCompound.getString("fluidRegistryName");
+//    LOGGER.info("PotState:-"+nbtTagCompound.getString("fluidRegistryName"));
+
   }
 
   // -------- used by vanilla, not intended for mod code
@@ -62,20 +77,26 @@ public class PotStateData implements IIntArray {
   private final int COOKTIME_FOR_COMPLETION_INDEX = 1;
   private final int BURNTIME_INITIAL_VALUE_INDEX = 2;
   private final int BURNTIME_REMAINING_INDEX = BURNTIME_INITIAL_VALUE_INDEX + FUEL_SLOTS_COUNT;
+  private final int FLUID_NAME_INDEX = BURNTIME_REMAINING_INDEX + 1 ;
   private final int END_OF_DATA_INDEX_PLUS_ONE = BURNTIME_REMAINING_INDEX + FUEL_SLOTS_COUNT;
 
   @Override
   public int get(int index) {
     validateIndex(index);
+    LOGGER.info(fluidRegistryName);
+
     if (index == COOKTIME_INDEX) {
       return cookTimeElapsed;
     } else if (index == COOKTIME_FOR_COMPLETION_INDEX) {
       return cookTimeForCompletion;
     } else if (index >= BURNTIME_INITIAL_VALUE_INDEX && index < BURNTIME_REMAINING_INDEX) {
-      return burnTimeInitialValues[index - BURNTIME_INITIAL_VALUE_INDEX];
+      return burnTimeInitialValues;
     } else {
-      return burnTimeRemainings[index - BURNTIME_REMAINING_INDEX];
+      return burnTimeRemainings;
     }
+//    else{
+//      return int(fluidRegistryName);
+//    }
   }
 
   @Override
@@ -86,9 +107,12 @@ public class PotStateData implements IIntArray {
     } else if (index == COOKTIME_FOR_COMPLETION_INDEX) {
       cookTimeForCompletion = value;
     } else if (index >= BURNTIME_INITIAL_VALUE_INDEX && index < BURNTIME_REMAINING_INDEX) {
-      burnTimeInitialValues[index - BURNTIME_INITIAL_VALUE_INDEX] = value;
-    } else {
-      burnTimeRemainings[index - BURNTIME_REMAINING_INDEX] = value;
+      burnTimeInitialValues = value;
+    } else if (index >= BURNTIME_REMAINING_INDEX && index<FLUID_NAME_INDEX){
+      burnTimeRemainings = value;
+    }
+    else{
+      fluidRegistryName = String.valueOf(value);
     }
   }
 

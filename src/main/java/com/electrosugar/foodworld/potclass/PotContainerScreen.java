@@ -1,11 +1,21 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
 
+import com.mojang.blaze3d.matrix.MatrixStack;
+import com.mojang.blaze3d.platform.GlStateManager;
 import com.mojang.blaze3d.systems.RenderSystem;
+import net.minecraft.block.Blocks;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screen.inventory.ContainerScreen;
+import net.minecraft.client.renderer.BlockRendererDispatcher;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.fluid.Fluid;
+import net.minecraft.fluid.Fluids;
+import net.minecraft.inventory.container.PlayerContainer;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.ITextComponent;
+import net.minecraftforge.fluids.FluidAttributes;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -74,8 +84,8 @@ public class PotContainerScreen extends ContainerScreen<PotContainer> {
     // If the mouse is over one of the burn time indicators, add the burn time indicator hovering text
     for (int i = 0; i < PotContainer.FUEL_SLOTS_COUNT; ++i) {
       if (isInRect(guiLeft + FLAME_XPOS + FLAME_X_SPACING * i, guiTop + FLAME_YPOS, FLAME_WIDTH, FLAME_HEIGHT, mouseX, mouseY)) {
-        hoveringText.add("Fuel Time:");
-        hoveringText.add(potContainer.secondsOfFuelRemaining(i) + "s");
+        hoveringText.add("Fluid: "+potContainer.getFluid().getRegistryName().toString());
+        hoveringText.add("Time: " +potContainer.secondsOfFuelRemaining(i) + "s");
       }
     }
 
@@ -101,17 +111,32 @@ public class PotContainerScreen extends ContainerScreen<PotContainer> {
     int edgeSpacingY = (this.height - this.ySize) / 2;
     this.blit(edgeSpacingX, edgeSpacingY, 0, 0, this.xSize, this.ySize);
 
-    // draw the cook progress bar
+    	// draw the cook progress bar
 		double cookProgress = potContainer.fractionOfCookTimeComplete();
 		blit(guiLeft + COOK_BAR_XPOS, guiTop + COOK_BAR_YPOS, COOK_BAR_ICON_U, COOK_BAR_ICON_V,
          (int)(cookProgress * COOK_BAR_WIDTH), COOK_BAR_HEIGHT);
 
 		// draw the fuel remaining bar for each fuel slot flame
 		for (int i = 0; i < PotContainer.FUEL_SLOTS_COUNT; ++i) {
+//			if(PotTileEntity.getFluidTexture()!=null) this.minecraft.getTextureManager().bindTexture(PotTileEntity.getFluidTexture());
+//			Minecraft.getInstance().getTextureManager().bindTexture(Fluids.WATER.getAttributes().getStillTexture())
+
+			ResourceLocation stillLocation = potContainer.getFluidTexture();
+			int color = potContainer.getFluid().getAttributes().getColor();
+			float r = ((color >> 16) & 0xFF) / 255f; // red
+			float g = ((color >> 8) & 0xFF) / 255f; // green
+			float b = ((color >> 0) & 0xFF) / 255f; // blue
+			float a = ((color >> 24) & 0xFF) / 255f; // alpha
+			GlStateManager.color4f(r,g,b,a);
+			TextureAtlasSprite sprite = Minecraft.getInstance().getAtlasSpriteGetter(PlayerContainer.LOCATION_BLOCKS_TEXTURE).apply(stillLocation);
+			ResourceLocation spriteLocation = sprite.getName();
+			ResourceLocation texture = new ResourceLocation(spriteLocation.getNamespace(), "textures/" + spriteLocation.getPath() + ".png");
+			minecraft.getTextureManager().bindTexture(texture);
 			double burnRemaining = potContainer.fractionOfFuelRemaining(i);
 			int yOffset = (int)((1.0 - burnRemaining) * FLAME_HEIGHT);
 			blit(guiLeft + FLAME_XPOS + FLAME_X_SPACING * i, guiTop + FLAME_YPOS + yOffset,
-              FLAME_ICON_U, FLAME_ICON_V + yOffset, FLAME_WIDTH, FLAME_HEIGHT - yOffset);
+					10,0 + yOffset, FLAME_WIDTH, FLAME_HEIGHT - yOffset);
+//			blit(100,100,100,100,100,sprite);
 		}
 	}
 

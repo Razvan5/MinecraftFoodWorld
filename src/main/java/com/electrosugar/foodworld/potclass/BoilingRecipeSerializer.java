@@ -1,12 +1,12 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.gson.*;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.AbstractCookingRecipe;
 import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.item.crafting.Ingredient;
 import net.minecraft.item.crafting.ShapedRecipe;
@@ -15,6 +15,7 @@ import net.minecraft.util.JSONUtils;
 import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.registry.Registry;
+import net.minecraftforge.fluids.FluidStack;
 
 import java.util.Map;
 import java.util.Set;
@@ -173,6 +174,19 @@ public class BoilingRecipeSerializer<T extends AbstractPotRecipe> extends net.mi
         }
     }
 
+    public static FluidStack deserializeFluidStack(JsonObject jsonObject) {
+        String s = JSONUtils.getString(jsonObject, "fluid");
+        Fluid fluid = Registry.FLUID.getValue(new ResourceLocation(s)).orElseThrow(() -> {
+            return new JsonSyntaxException("Unknown item '" + s + "'");
+        });
+        if (jsonObject.has("data")) {
+            throw new JsonParseException("Disallowed data tag found");
+        } else {
+            int i = JSONUtils.getInt(jsonObject, "amount", 1);
+            return new FluidStack(fluid,i);
+        }
+    }
+
     public T read(ResourceLocation recipeId, JsonObject json) {
         String groupName = JSONUtils.getString(json, "group", "");
         Map<String, Ingredient> map = BoilingRecipeSerializer.deserializeKey(JSONUtils.getJsonObject(json, "key"));
@@ -186,7 +200,18 @@ public class BoilingRecipeSerializer<T extends AbstractPotRecipe> extends net.mi
 
         float experience = JSONUtils.getFloat(json, "experience", 0.0F);
         int cookingTime = JSONUtils.getInt(json, "cookingtime", this.cookingTime);
-        return this.factory.create(recipeId, groupName ,recipeWidth, recipeHeight, ingredientList, itemstack, experience, cookingTime);
+        //fluidTime is the burnTime of fluidItem/tag of fluidItems
+        int fluidTime = JSONUtils.getInt(json,"fluidtime",100);
+        //fluidItem is the item corresponding to the fluid for easy semi-vanilla automation
+        String s = JSONUtils.getString(json, "fluiditem");
+        Item item = Registry.ITEM.getValue(new ResourceLocation(s)).orElseThrow(() -> {
+            return new JsonSyntaxException("Unknown item '" + s + "'");
+        });
+        ItemStack fluidItem = new ItemStack(item) ;
+//      ItemStack fluidItem = ShapedRecipe.deserializeItem(JSONUtils.getJsonObject(json, "fluiditem"));
+        //this is only used for the ResourceLocation texture and som other future versions :(
+        FluidStack fluidStack = BoilingRecipeSerializer.deserializeFluidStack(JSONUtils.getJsonObject(json,"fluidstack"));
+        return this.factory.create(recipeId, groupName ,recipeWidth, recipeHeight, ingredientList, itemstack, experience, cookingTime, fluidTime, fluidItem,fluidStack);
     }
 
     public T read(ResourceLocation recipeId, PacketBuffer buffer) {
@@ -202,7 +227,10 @@ public class BoilingRecipeSerializer<T extends AbstractPotRecipe> extends net.mi
         ItemStack resultItems = buffer.readItemStack();
         float xpAmount = buffer.readFloat();
         int cookingTime = buffer.readVarInt();
-        return this.factory.create(recipeId, groupName,recipeWidth,recipeHeight, ingredientNonNullList, resultItems, xpAmount, cookingTime);
+        int fluidTime = buffer.readVarInt();
+        ItemStack fluidItem = buffer.readItemStack();
+        FluidStack fluidStack = buffer.readFluidStack();
+        return this.factory.create(recipeId, groupName,recipeWidth,recipeHeight, ingredientNonNullList, resultItems, xpAmount, cookingTime, fluidTime, fluidItem,fluidStack);
     }
 
     public void write(PacketBuffer buffer, T recipe) {
@@ -216,9 +244,12 @@ public class BoilingRecipeSerializer<T extends AbstractPotRecipe> extends net.mi
         buffer.writeItemStack(recipe.result);
         buffer.writeFloat(recipe.experience);
         buffer.writeVarInt(recipe.cookTime);
+        buffer.writeVarInt(recipe.fluidTime);
+        buffer.writeItemStack(recipe.fluidItem);
+        buffer.writeFluidStack(recipe.fluidStack);
     }
 
     interface IFactory<T extends AbstractPotRecipe> {
-        T create(ResourceLocation type, String id, int recipeWidth, int recipeHeight, NonNullList<Ingredient> ingredientNonNullList, ItemStack boilingResult, float xpAmount, int fuelTime);
+        T create(ResourceLocation type, String id, int recipeWidth, int recipeHeight, NonNullList<Ingredient> ingredientNonNullList, ItemStack boilingResult, float xpAmount, int fuelTime, int fluidTime, ItemStack fluidItem,FluidStack fluidStack);
     }
 }

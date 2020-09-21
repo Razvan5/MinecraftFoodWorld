@@ -1,4 +1,4 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
 import net.minecraft.item.crafting.IRecipeType;
 

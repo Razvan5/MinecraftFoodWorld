@@ -1,4 +1,4 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
 
 import com.electrosugar.foodworld.FoodWorld;
@@ -8,8 +8,6 @@ import net.minecraft.item.BlockItem;
 import net.minecraft.item.Item;
 import net.minecraft.item.crafting.*;
 import net.minecraft.tileentity.TileEntityType;
-import net.minecraft.util.ResourceLocation;
-import net.minecraft.util.registry.Registry;
 import net.minecraftforge.common.extensions.IForgeContainerType;
 import net.minecraftforge.event.RegistryEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
@@ -73,7 +71,7 @@ public class StartupCommon
 
     BOILING_RECIPE_SERIALIZER = IRecipeSerializer.register("foodworld:boiling",new BoilingRecipeSerializer<PotRecipe>(PotRecipe::new,100));
 //    boilingRecipeSerializer.setRegistryName("boiling");
-    Registry.register(Registry.RECIPE_TYPE, new ResourceLocation(POT_RECIPE_TYPE.toString()), POT_RECIPE_TYPE);
+//    Registry.register(Registry.RECIPE_TYPE, new ResourceLocation(POT_RECIPE_TYPE.toString()), POT_RECIPE_TYPE);
 
     event.getRegistry().register(BOILING_RECIPE_SERIALIZER);
   }

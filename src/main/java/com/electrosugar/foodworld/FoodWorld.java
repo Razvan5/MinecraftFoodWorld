@@ -36,14 +36,14 @@ public class FoodWorld
 
     public static void registerCommonEvents() {
 
-        MOD_EVENT_BUS.register(com.electrosugar.foodworld.mbe31_inventory_furnace.StartupCommon.class);
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.potclass.StartupCommon.class);
 
         //----------------
     }
 
     public static void registerClientOnlyEvents() {
 
-        MOD_EVENT_BUS.register(com.electrosugar.foodworld.mbe31_inventory_furnace.StartupClientOnly.class);
+        MOD_EVENT_BUS.register(com.electrosugar.foodworld.potclass.StartupClientOnly.class);
 
         //----------------
     }

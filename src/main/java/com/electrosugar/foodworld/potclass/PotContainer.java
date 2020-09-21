@@ -1,15 +1,27 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
+import com.google.common.collect.Lists;
+import com.google.gson.JsonSyntaxException;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
+import net.minecraft.fluid.Fluid;
 import net.minecraft.inventory.IInventory;
+import net.minecraft.inventory.container.IContainerListener;
 import net.minecraft.inventory.container.Slot;
 import net.minecraft.inventory.container.Container;
 import net.minecraft.item.ItemStack;
+import net.minecraft.util.IntReferenceHolder;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.registry.Registry;
 import net.minecraft.world.World;
+import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.api.distmarker.OnlyIn;
+import net.minecraftforge.fluids.FluidStack;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+
+import java.util.List;
 
 /**
  * User: brandon3055
@@ -23,8 +35,10 @@ import org.apache.logging.log4j.Logger;
  * sends them to the client container.
  */
 public class PotContainer extends Container {
+    private final List<IContainerListener> listeners = Lists.newArrayList();
 
-  public static PotContainer createContainerServerSide(int windowID, PlayerInventory playerInventory,
+
+    public static PotContainer createContainerServerSide(int windowID, PlayerInventory playerInventory,
                                                        PotZoneContents inputZoneContents,
                                                        PotZoneContents outputZoneContents,
                                                        PotZoneContents fuelZoneContents,
@@ -94,8 +108,13 @@ public class PotContainer extends Container {
     this.fuelZoneContents = fuelZoneContents;
     this.potStateData = potStateData;
     this.world = invPlayer.player.world;
+    //test
+    this.fluid =Registry.FLUID.getValue(new ResourceLocation(potStateData.fluidRegistryName)).orElseThrow(() -> {
+        return new JsonSyntaxException("Unknown item '" + potStateData.fluidRegistryName + "'");
+    });
 
-    trackIntArray(potStateData);    // tell vanilla to keep the potStateData synchronised between client and server Containers
+//    potStateData.detectAndSendChanges();
+    trackIntArray(potStateData);// tell vanilla to keep the potStateData synchronised between client and server Containers
 
 		final int SLOT_X_SPACING = 18;
 		final int SLOT_Y_SPACING = 18;
@@ -197,7 +216,7 @@ public class PotContainer extends Container {
         if (!PotTileEntity.getSmeltingResultForItem(world, this.inputZoneContents).isEmpty()) { // smeltable -> add to input
           successfulTransfer = mergeInto(SlotZone.INPUT_ZONE, sourceItemStack, false);
         }
-        if (!successfulTransfer && PotTileEntity.getItemBurnTime(world, sourceItemStack) > 0) { //burnable -> add to fuel from the bottom slot first
+        if (!successfulTransfer && PotTileEntity.getItemBurnTime(world, inputZoneContents) > 0) { //burnable -> add to fuel from the bottom slot first
           successfulTransfer = mergeInto(SlotZone.FUEL_ZONE, sourceItemStack, true);
         }
         if (!successfulTransfer) {  // didn't fit into furnace; try player main inventory or hotbar
@@ -248,10 +267,46 @@ public class PotContainer extends Container {
    * @return fraction remaining, between 0.0 - 1.0
    */
   public double fractionOfFuelRemaining(int fuelSlot) {
-    if (potStateData.burnTimeInitialValues[fuelSlot] <= 0 ) return 0;
-    double fraction = potStateData.burnTimeRemainings[fuelSlot] / (double) potStateData.burnTimeInitialValues[fuelSlot];
+    if (potStateData.burnTimeInitialValues <= 0 ) return 0;
+    double fraction = potStateData.burnTimeRemainings / (double) potStateData.burnTimeInitialValues;
     return MathHelper.clamp(fraction, 0.0, 1.0);
   }
+
+  /*test*/
+    public Fluid getFluid(){
+        fluid = Registry.FLUID.getValue(new ResourceLocation(potStateData.fluidRegistryName)).orElseThrow(() -> {
+            return new JsonSyntaxException("Unknown item '" +  potStateData.fluidRegistryName + "'");
+        });
+        LOGGER.info("TEST"+potStateData.fluidRegistryName);
+        LOGGER.info("TEST"+fluid.getRegistryName().toString());
+        return fluid;
+    }
+    public ResourceLocation getFluidTexture(){
+        Fluid fluid = Registry.FLUID.getValue(new ResourceLocation(potStateData.fluidRegistryName)).orElseThrow(() -> {
+            return new JsonSyntaxException("Unknown item '" +  potStateData.fluidRegistryName + "'");
+        });
+        return fluid.getAttributes().getStillTexture();
+    }
+
+    @Override
+    public void detectAndSendChanges() {
+        super.detectAndSendChanges();
+//        LOGGER.info(potStateData.fluidRegistryName);
+    }
+
+    @Override
+    public void addListener(IContainerListener listener) {
+        if (!this.listeners.contains(listener)) {
+            this.listeners.add(listener);
+            listener.sendAllContents(this, this.getInventory());
+            this.detectAndSendChanges();
+        }
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    public void removeListener(IContainerListener listener) {
+        this.listeners.remove(listener);
+    }
 
   /**
    * return the remaining burn time of the fuel in the given slot
@@ -259,8 +314,8 @@ public class PotContainer extends Container {
    * @return seconds remaining
    */
   public int secondsOfFuelRemaining(int fuelSlot)	{
-    if (potStateData.burnTimeRemainings[fuelSlot] <= 0 ) return 0;
-    return potStateData.burnTimeRemainings[fuelSlot] / 20; // 20 ticks per second
+    if (potStateData.burnTimeRemainings <= 0 ) return 0;
+    return potStateData.burnTimeRemainings / 20; // 20 ticks per second
   }
 
   /**
@@ -319,6 +374,9 @@ public class PotContainer extends Container {
   private PotZoneContents outputZoneContents;
   private PotZoneContents fuelZoneContents;
   private PotStateData potStateData;
+  private Fluid fluid = Registry.FLUID.getValue(new ResourceLocation("empty")).orElseThrow(() -> {
+      return new JsonSyntaxException("Unknown item '" + "empty" + "'");
+  });
 
   private World world; //needed for some helper methods
   private static final Logger LOGGER = LogManager.getLogger();

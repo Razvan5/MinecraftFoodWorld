@@ -1,9 +1,6 @@
-package com.electrosugar.foodworld.mbe31_inventory_furnace;
+package com.electrosugar.foodworld.potclass;
 
-import net.minecraft.inventory.CraftingInventory;
-import net.minecraft.inventory.IInventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.IRecipeSerializer;
 import net.minecraft.item.crafting.IRecipeType;
 import net.minecraft.item.crafting.Ingredient;
@@ -11,6 +8,7 @@ import net.minecraft.util.NonNullList;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
 import net.minecraftforge.common.crafting.IShapedRecipe;
+import net.minecraftforge.fluids.FluidStack;
 
 public abstract class AbstractPotRecipe implements IShapedRecipe<PotZoneContents> {
     protected final IRecipeType<?> type;
@@ -22,6 +20,10 @@ public abstract class AbstractPotRecipe implements IShapedRecipe<PotZoneContents
     protected final ItemStack result;
     protected final float experience;
     protected final int cookTime;
+    protected final int fluidTime;
+    protected final ItemStack fluidItem;
+    protected final FluidStack fluidStack;
+
 
     @Override
     public int getRecipeWidth() {
@@ -38,7 +40,18 @@ public abstract class AbstractPotRecipe implements IShapedRecipe<PotZoneContents
         return StartupCommon.BOILING_RECIPE_SERIALIZER;
     }
 
-    public AbstractPotRecipe(IRecipeType<?> typeIn, ResourceLocation idIn, String groupIn,int recipeWidthIn, int recipeHeightIn, NonNullList<Ingredient> ingredientListIn, ItemStack resultIn, float experienceIn, int cookTimeIn) {
+    public AbstractPotRecipe(IRecipeType<?> typeIn,
+                             ResourceLocation idIn,
+                             String groupIn,
+                             int recipeWidthIn,
+                             int recipeHeightIn,
+                             NonNullList<Ingredient> ingredientListIn,
+                             ItemStack resultIn,
+                             float experienceIn,
+                             int cookTimeIn,
+                             int fluidTimeIn,
+                             ItemStack fluidItemIn,
+                             FluidStack fluidStackIn) {
         this.type = typeIn;
         this.id = idIn;
         this.group = groupIn;
@@ -48,6 +61,9 @@ public abstract class AbstractPotRecipe implements IShapedRecipe<PotZoneContents
         this.result = resultIn;
         this.experience = experienceIn;
         this.cookTime = cookTimeIn;
+        this.fluidTime = fluidTimeIn;
+        this.fluidItem = fluidItemIn;
+        this.fluidStack = fluidStackIn;
     }
 
     public boolean canFit(int width, int height) {
@@ -146,5 +162,26 @@ public abstract class AbstractPotRecipe implements IShapedRecipe<PotZoneContents
 
     public IRecipeType<?> getType() {
         return this.type;
+    }
+
+
+    public NonNullList<Ingredient> getIngredientList() {
+        return ingredientList;
+    }
+
+    public ItemStack getResult() {
+        return result;
+    }
+
+    public int getFluidTime() {
+        return fluidTime;
+    }
+
+    public ItemStack getFluidItem() {
+        return fluidItem;
+    }
+
+    public FluidStack getFluidStack() {
+        return fluidStack;
     }
 }
